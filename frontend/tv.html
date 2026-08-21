@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Mídia Indoor - TV</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+         
+            background: radial-gradient(rgb(152, 43, 43), rgb(42, 37, 37));
+            
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            width: 100vw;
+            height: 100vh;
+
+            overflow: hidden;
+        }
+
+        .tv-container {
+            display: flex;
+
+            width: 95vw;
+            height: 90vh;
+
+            gap: 28px;
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+
+            width: 35%;
+
+            gap: 24px;
+        }
+
+        .box {
+            background-color: #0cdbe6;
+
+            border: 6px solid rgba(37, 35, 35, 0.25);
+            border-radius: 15px;
+
+            padding: 20px;
+
+            display: flex;
+            flex-direction: column;
+
+            justify-content: center;
+            align-items: center;
+
+            text-align: center;
+
+            box-shadow: 0px 0px 40px white;
+         
+
+            overflow: hidden;
+        }
+
+        .box-title {
+            color: #ffffff;
+
+            font-size: 2.2vw;
+
+            font-weight: bold;
+
+            text-transform: uppercase;
+
+            text-shadow:
+                1px 1px 2px rgba(245, 242, 242, 0.4);
+
+           height: 10vh;
+        }
+
+        .local-box {
+            flex: 1;
+        }
+
+        .local-number {
+            color: #d12c2c;
+
+            font-size: 9vw;
+
+            font-weight: bold;
+
+            line-height: 1;
+        }
+
+        .local-type {
+            color: #f70707;
+
+            font-size: 1.8vw;
+
+            font-weight: bold;
+
+            margin-top: 6px;
+        }
+
+        .history-box {
+            flex: 1;
+
+            justify-content: flex-start;
+
+            align-items: flex-start;
+        }
+
+        .history-box .history-title {
+            font-size: 1.8vw;
+
+            align-self: center;
+        }
+
+        .history-list {
+            list-style: none;
+
+            width: 100%;
+
+            color: #d12c2c;
+
+            font-size: 1.5vw;
+
+            font-weight: bold;
+
+            text-align: left;
+        }
+
+        .history-list li {
+            margin-bottom: 8px;
+
+            border-bottom:
+                1px solid rgba(0, 0, 0, 0.1);
+
+            padding-bottom: 5px;
+        }
+
+        .patient-box {
+            flex: 3;
+           
+        }
+
+        .patient-name {
+            color: red;
+
+            font-size: 6.5vw;
+
+            font-weight: bold;
+
+            line-height: 1.2;
+
+            word-break: break-word;
+            
+            animation: scalar 5s infinite;
+          
+        
+        }
+       
+
+        .logo-box {
+            flex: 1;
+            height: 30vh;
+
+            position: absolute;
+            bottom: 400px;
+
+            line-height: 1.2;
+            word-break: break-word;
+
+            font-size: 6.5vw;
+        }
+
+        .logo-text {
+            color: #0561a8;
+
+            font-size: 3.5vw;
+
+            font-weight: bold;
+
+            text-transform: uppercase;
+            
+        }
+
+
+        @keyframes scalar {
+
+            0%,
+            25% {transform: scale(0.7);
+               
+            }
+
+            50% {transform: scale(0.8);
+                
+            }
+            75% {transform: scale(0.9);
+                
+            }
+            100% {transform: scale(1);
+               
+            }
+        }
+
+        @media (max-width: 800px) {
+
+            .tv-container {
+                width: 95vw;
+                height: 90vh;
+            }
+
+            .box {
+                padding: 10px;
+            }
+
+            .box-title {
+                font-size: 3vw;
+            }
+
+            .local-number {
+                font-size: 10vw;
+            }
+
+            .local-type {
+                font-size: 2.5vw;
+            }
+
+            .history-box .history-title {
+                font-size: 2.5vw;
+            }
+
+            .history-list {
+                font-size: 2vw;
+            }
+
+            .patient-name {
+                font-size: 7vw;
+            }
+
+            .logo-text {
+                font-size: 4vw;
+            }
+        }
+
+    </style>
+</head>
+
+<body>
+
+  <div class="tv-container">
+
+ <div class="left-panel">
+
+  <div class="box local-box">
+ <div class="box-title" id="local-tipo">GUITCHE</div>
+  <div class="local-number" id="local-numero">---</div>
+ </div>
+
+<div class="box history-box">
+ <div class="box-title">ULTIMAS CHAMADAS</div>
+  <ul id="history-list"></ul>
+         </div>
+
+      </div>
+ <div class="right-panel">
+
+     <div class="box patient-box">
+     <div class="box-title">PACIENTE</div>
+          <div class="patient-name" id="patient-name">AGUARDANDO....</div>
+    </div>
+
+     <div class="box logo-box">
+           <div class="logo-text">Saúde+ (Saúde Plus)🏥</div>
+     </div>
+
+     </div>
+
+    </div>
+
+    <script>
+
+        let ultimoId = null;
+
+      // Funçao criada para buscar a chamada
+    // atual e o historico da TV em tempo real
+        function atualizar() {
+
+       fetch("/tv/chamada")
+                .then(r => r.json())
+      .then(data => {
+
+        const chamada = data.chamada;
+                    const historico = data.historico || [];
+
+       if (chamada) {
+
+     document.getElementById("local-tipo").innerText =
+         chamada.localTipo || "GUITCHE";
+
+          document.getElementById("local-numero").innerText =
+             chamada.localNumero || "--";
+
+          document.getElementById("patient-name").innerText =
+          chamada.paciente || "AGUARDANDO...";
+
+         // Flash visual quando ha chamada nova
+         if (chamada.id !== ultimoId) {
+
+       ultimoId = chamada.id;
+
+   const patientBox =
+      document.querySelector(".patient-box");
+
+      patientBox.classList.remove("flash");
+
+      void patientBox.offsetWidth;
+
+  patientBox.classList.add("flash");
+  }
+     }
+
+ const list =
+       document.getElementById("history-list");
+
+  list.innerHTML = "";
+
+       historico.slice(0, 4).forEach(h => {
+
+     const li = document.createElement("li");
+
+      const tipo = h.localTipo
+            ? h.localTipo.substring(0, 4)
+          : "GUITCHE";
+
+    li.innerText =
+    `${tipo}. ${h.localNumero} - ${h.paciente}`;
+
+     list.appendChild(li);
+ });
+
+  })
+.catch(err =>
+  console.log("Erro ao buscar chamada:", err)
+ );
+     }
+
+ // Polling a cada 2 segundos
+     atualizar();
+        setInterval(atualizar, 2000);
+
+    </script>
+
+</body>
+
+</html>

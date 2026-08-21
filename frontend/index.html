@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="Container">
+  <h1>Saúde+ (Saúde Plus)</h1>
+  <h2>🏥 Sistema Hospitalar</h2>
+  <input id="usuario" placeholder="Usuário">
+  <input id="senha" type="password" placeholder="Senha">
+  <button  onclick="login()">Entrar</button>
+</div>
+
+<script>
+function login() {
+  fetch("http://localhost:3000/login", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      usuario: usuario.value,
+      senha: senha.value
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if(data.tipo === "triagem") location.href = "triagem.html";
+    if(data.tipo === "medico") location.href = "medico.html";
+    if(data.tipo === "atendimento") location.href = "atendimento.html";
+  });
+}
+</script>
+</body>
+</html>

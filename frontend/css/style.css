@@ -1,0 +1,134 @@
+body {
+    text-align: center;
+    background: radial-gradient(white, azure, black);
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+/* CONTAINER */
+.Container {
+    width: min(90%, 700px);
+    min-height: 35vh;
+    margin: clamp(30px, 10vh, 120px) auto;
+    border: solid 1px;
+    border-radius: 30px 9px 10px;
+    padding: clamp(20px, 5vw, 50px);
+
+    background-image: radial-gradient(
+        rgb(173, 195, 48),
+        rgb(33, 159, 159),
+        rgb(73, 17, 204)
+    );
+
+    box-shadow: 20px 20px 5px rgb(97, 96, 96);
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* TÍTULO */
+h1 {
+    color: rgb(25, 65, 145);
+    text-shadow: 9px 19px 5px rgb(139, 154, 7);
+    padding: 20px;
+    margin: 15px;
+    font-size: clamp(28px, 5vw, 45px);
+}
+
+/* SUBTÍTULO */
+h2 {
+    color: rgb(25, 65, 145);
+}
+
+/* INPUTS */
+input {
+    width: min(90%, 400px);
+    padding: 15px;
+    margin: 15px;
+    border: 1px solid;
+    border-radius: 10px;
+    box-sizing: border-box;
+}
+
+/* BOTÃO */
+button {
+    padding: 15px 30px;
+    margin-top: 15px;
+
+    border: solid 1px;
+    border-radius: 20px;
+
+    cursor: pointer;
+
+    position: static;
+
+    width: min(80%, 250px);
+
+    transition: 0.3s;
+}
+
+/* HOVER */
+button:hover {
+    transform: scale(0.95);
+    color: blueviolet;
+    background-color: rgb(30, 74, 146);
+}
+
+/* CLICK */
+button:active {
+    animation: mexer 0.5s linear;
+}
+
+/* ANIMAÇÃO */
+@keyframes mexer {
+    25% {
+        transform: translate(10px, 10px);
+    }
+
+    50% {
+        transform: translate(-10px, -10px);
+    }
+
+    75% {
+        transform: translate(10px, -10px);
+    }
+
+    100% {
+        transform: translate(0, 0);
+    }
+}
+
+/* CELULAR */
+@media (max-width: 600px) {
+
+    body {
+        padding: 10px;
+    }
+
+    .Container {
+        width: 95%;
+        margin: 30px auto;
+        padding: 20px 10px;
+    }
+
+    h1 {
+        padding: 10px;
+        margin: 10px;
+        font-size: 30px;
+    }
+
+    input {
+        width: 90%;
+        margin: 10px;
+    }
+
+    button {
+        width: 80%;
+        max-width: 250px;
+    }
+}
