@@ -17,9 +17,7 @@
         }
 
         body {
-         
             background: radial-gradient(rgb(152, 43, 43), rgb(42, 37, 37));
-            
 
             display: flex;
             justify-content: center;
@@ -33,11 +31,13 @@
 
         .tv-container {
             display: flex;
+            justify-content: center;
+            align-items: stretch;
 
-            width: 95vw;
-            height: 90vh;
+            width: 96vw;
+            height: 94vh;
 
-            gap: 28px;
+            gap: 24px;
         }
 
         .left-panel {
@@ -45,6 +45,17 @@
             flex-direction: column;
 
             width: 35%;
+            height: 100%;
+
+            gap: 24px;
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+
+            width: 65%;
+            height: 100%;
 
             gap: 24px;
         }
@@ -52,8 +63,8 @@
         .box {
             background-color: #0cdbe6;
 
-            border: 6px solid rgba(37, 35, 35, 0.25);
-            border-radius: 15px;
+            border: 5px solid rgba(37, 35, 35, 0.35);
+            border-radius: 18px;
 
             padding: 20px;
 
@@ -65,8 +76,7 @@
 
             text-align: center;
 
-            box-shadow: 0px 0px 40px white;
-         
+            box-shadow: 0px 0px 30px rgba(255, 255, 255, 0.6);
 
             overflow: hidden;
         }
@@ -83,7 +93,8 @@
             text-shadow:
                 1px 1px 2px rgba(245, 242, 242, 0.4);
 
-           height: 10vh;
+            height: auto;
+            margin-bottom: 12px;
         }
 
         .local-box {
@@ -115,7 +126,7 @@
 
             justify-content: flex-start;
 
-            align-items: flex-start;
+            align-items: center;
         }
 
         .history-box .history-title {
@@ -135,7 +146,7 @@
 
             font-weight: bold;
 
-            text-align: left;
+            text-align: center;
         }
 
         .history-list li {
@@ -149,7 +160,7 @@
 
         .patient-box {
             flex: 3;
-           
+            width: 100%;
         }
 
         .patient-name {
@@ -162,19 +173,15 @@
             line-height: 1.2;
 
             word-break: break-word;
-            
+
             animation: scalar 5s infinite;
-          
-        
         }
-       
 
         .logo-box {
             flex: 1;
-            height: 30vh;
+            width: 100%;
 
-            position: absolute;
-            bottom: 400px;
+            position: relative;
 
             line-height: 1.2;
             word-break: break-word;
@@ -190,27 +197,29 @@
             font-weight: bold;
 
             text-transform: uppercase;
-            
         }
 
 
         @keyframes scalar {
 
             0%,
-            25% {transform: scale(0.7);
-               
+            25% {
+                transform: scale(0.7);
             }
 
-            50% {transform: scale(0.8);
-                
+            50% {
+                transform: scale(0.8);
             }
-            75% {transform: scale(0.9);
-                
+
+            75% {
+                transform: scale(0.9);
             }
-            100% {transform: scale(1);
-               
+
+            100% {
+                transform: scale(1);
             }
         }
+
 
         @media (max-width: 800px) {
 
@@ -272,6 +281,7 @@
          </div>
 
       </div>
+
  <div class="right-panel">
 
      <div class="box patient-box">
