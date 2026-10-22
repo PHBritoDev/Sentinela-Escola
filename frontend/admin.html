@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f766e">
+  <title>Administração · Saúde+</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="pagina">
+    <div class="cabecalho-pagina">
+      <div>
+        <h1>Painel da unidade</h1>
+        <p>Movimento do dia, equipe e configurações do sistema.</p>
+      </div>
+      <a class="btn btn-secundario" href="tv.html" target="_blank" rel="noopener">📺 Abrir TV</a>
+    </div>
+
+    <div id="aviso-armazenamento"></div>
+    <div class="indicadores" id="indicadores"></div>
+
+    <div class="grade grade-2-inv">
+      <div class="grade">
+        <section class="cartao">
+          <div class="cartao-cabeca"><div><h2>Classificação de risco hoje</h2><p>Pacientes triados por cor</p></div></div>
+          <div class="cartao-corpo"><div class="barra-dist" id="barra"></div><div class="legenda" id="legenda"></div></div>
+        </section>
+
+        <section class="cartao">
+          <div class="cartao-cabeca"><div><h2>Pacientes do dia</h2><p id="resumo-pac">Carregando…</p></div></div>
+          <div class="rolagem-x"><table class="tabela"><thead><tr><th>Senha</th><th>Paciente</th><th>Risco</th><th>Situação</th><th>Chegada</th><th>Tempo total</th></tr></thead><tbody id="tabela-pac"></tbody></table></div>
+        </section>
+      </div>
+
+      <div class="grade">
+        <section class="cartao">
+          <div class="cartao-cabeca"><div><h2>Equipe</h2><p>Usuários com acesso ao sistema</p></div></div>
+          <form class="cartao-corpo campos" id="form-usuario" novalidate>
+            <div class="campo"><label for="u-nome">Nome de exibição</label><input id="u-nome" maxlength="80" placeholder="Ex.: Dra. Joana Lima"></div>
+            <div class="campos-2">
+              <div class="campo"><label for="u-usuario">Usuário *</label><input id="u-usuario" maxlength="40" autocapitalize="none" placeholder="joana.lima"></div>
+              <div class="campo"><label for="u-senha">Senha *</label><input id="u-senha" type="password" maxlength="60"></div>
+            </div>
+            <div class="campo"><label for="u-tipo">Perfil *</label>
+              <select id="u-tipo"><option value="atendimento">Recepção</option><option value="triagem">Triagem (enfermagem)</option><option value="medico">Médico</option><option value="enfermagem">Sala de medicação</option><option value="admin">Administração</option></select>
+            </div>
+            <button class="btn" id="criar" type="submit">Adicionar usuário</button>
+          </form>
+          <ul class="fila" id="usuarios" style="max-height:none;border-top:1px solid var(--borda)"></ul>
+        </section>
+
+        <section class="cartao">
+          <div class="cartao-cabeca"><div><h2>Encerrar o dia</h2><p>Apaga pacientes, chamadas da TV e zera as senhas. A equipe é mantida.</p></div></div>
+          <div class="cartao-corpo"><button class="btn btn-perigo" id="limpar">Limpar todos os pacientes</button></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    const sessao = SP.proteger("admin");
+    const { API, esc, hora, seloRisco, seloStatus, toast, acao, RISCOS, PERFIS } = SP;
+    const $ = id => document.getElementById(id);
+
+    async function carregarPainel() {
+      try {
+        const [st, pac, saude] = await Promise.all([API.get("/estatisticas"), API.get("/pacientes?hoje=1"), API.get("/health")]);
+        const ps = st.porStatus || {};
+        $("indicadores").innerHTML = [
+          ["Pacientes hoje", st.hoje, "cadastrados na recepção"],
+          ["Aguardando triagem", ps.aguardando_triagem || 0, "na sala de espera"],
+          ["Aguardando médico", (ps.aguardando_medico || 0) + (ps.em_atendimento || 0), (ps.em_atendimento || 0) + " em consulta agora"],
+          ["Na medicação", ps.aguardando_medicacao || 0, "aguardando administração"],
+          ["Tempo médio", st.tempoMedioMin == null ? "—" : st.tempoMedioMin + " min", "da chegada à alta"]
+        ].map(([a, b, c]) => '<div class="indicador"><span>' + a + "</span><b>" + b + "</b><small>" + c + "</small></div>").join("");
+
+        const total = Object.values(st.porRisco || {}).reduce((a, b) => a + b, 0);
+        $("barra").innerHTML = total ? Object.keys(RISCOS).map(r => (st.porRisco[r] ? '<i style="width:' + (st.porRisco[r] / total * 100) + "%;background:" + RISCOS[r].cor + '" title="' + RISCOS[r].nome + '"></i>' : "")).join("") : "";
+        $("legenda").innerHTML = Object.keys(RISCOS).map(r => '<span style="--c:' + RISCOS[r].cor + '">' + RISCOS[r].nome + ": <b>" + ((st.porRisco || {})[r] || 0) + "</b></span>").join("");
+
+        $("resumo-pac").textContent = pac.length + " registro(s)";
+        $("tabela-pac").innerHTML = pac.length ? pac.map(p => {
+          const fim = p.finalizadoEm ? new Date(p.finalizadoEm) : new Date();
+          const min = Math.round((fim - new Date(p.criadoEm)) / 60000);
+          return "<tr><td><b>" + esc(p.senha) + "</b></td><td>" + esc(p.nome) + "</td><td>" + (seloRisco(p.triagem && p.triagem.risco) || "—") + "</td><td>" + seloStatus(p.status) + "</td><td>" + hora(p.criadoEm) + "</td><td>" + min + " min</td></tr>";
+        }).join("") : '<tr><td colspan="6" class="vazio">Nenhum paciente hoje.</td></tr>';
+
+        $("aviso-armazenamento").innerHTML = saude.persistente ? "" :
+          '<div class="alerta alerta-aviso" style="margin-bottom:20px"><span style="font-size:20px">⚠️</span><div><b>Os dados não estão em um banco permanente.</b>' +
+          "Na Vercel, conecte um banco Upstash Redis (aba Storage do projeto → Upstash/Redis → Connect). As variáveis KV_REST_API_URL e KV_REST_API_TOKEN são criadas sozinhas e o sistema passa a salvar de verdade após o próximo deploy.</div></div>";
+      } catch (e) { toast(e.message, "erro"); }
+    }
+
+    async function carregarUsuarios() {
+      try {
+        const lista = await API.get("/usuarios");
+        $("usuarios").innerHTML = lista.map(u => '<li class="item-fila" style="cursor:default"><span class="avatar">' + esc(SP.iniciais(u.nome)) + '</span><div><div class="nome">' + esc(u.nome) + '</div><div class="meta"><span>@' + esc(u.usuario) + '</span><span class="selo selo-neutro">' + esc((PERFIS[u.tipo] || {}).nome || u.tipo) + "</span></div></div>" +
+          '<div class="lado">' + (u.usuario === sessao.usuario ? '<span class="espera">você</span>' : '<button class="btn btn-perigo btn-p" data-excluir="' + esc(u.usuario) + '">Excluir</button>') + "</div></li>").join("");
+      } catch (e) { toast(e.message, "erro"); }
+    }
+
+    $("usuarios").addEventListener("click", e => {
+      const b = e.target.closest("[data-excluir]");
+      if (b && confirm("Excluir o usuário " + b.dataset.excluir + "?")) acao(b, async () => { await API.del("/usuarios/" + encodeURIComponent(b.dataset.excluir)); toast("Usuário excluído.", "sucesso"); carregarUsuarios(); });
+    });
+
+    $("form-usuario").addEventListener("submit", e => {
+      e.preventDefault();
+      acao($("criar"), async () => {
+        const u = await API.post("/usuarios", { nome: $("u-nome").value, usuario: $("u-usuario").value, senha: $("u-senha").value, tipo: $("u-tipo").value });
+        toast("Usuário " + u.usuario + " criado.", "sucesso");
+        $("form-usuario").reset(); carregarUsuarios();
+      });
+    });
+
+    $("limpar").onclick = () => {
+      if (!confirm("Apagar TODOS os pacientes e chamadas? Esta ação não pode ser desfeita.")) return;
+      acao($("limpar"), async () => { await API.post("/admin/limpar"); toast("Dados do dia apagados.", "sucesso"); carregarPainel(); });
+    };
+
+    carregarPainel(); carregarUsuarios();
+    SP.aCada(carregarPainel, 10000);
+  </script>
+</body>
+</html>

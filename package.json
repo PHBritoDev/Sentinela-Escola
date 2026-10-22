@@ -1,12 +1,17 @@
 {
-  "name": "hospital-system",
-  "version": "1.0.0",
+  "name": "saude-plus-sentinela",
+  "version": "2.0.0",
+  "description": "Saúde+ · Sistema de pronto atendimento (recepção, triagem, médico, medicação e painel da TV).",
   "main": "api/index.js",
+  "private": true,
   "scripts": {
-    "start": "node backend/server.js"
+    "start": "node backend/server.js",
+    "test": "node --test backend/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
-    "cors": "^2.8.5",
     "express": "^4.22.1"
   }
 }

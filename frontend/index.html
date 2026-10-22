@@ -1,34 +1,102 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f766e">
+  <title>Entrar · Saúde+</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<div class="Container">
-  <h1>Saúde+ (Saúde Plus)</h1>
-  <h2>🏥 Sistema Hospitalar</h2>
-  <input id="usuario" placeholder="Usuário">
-  <input id="senha" type="password" placeholder="Senha">
-  <button  onclick="login()">Entrar</button>
-</div>
+  <main class="login">
+    <section class="login-arte">
+      <span class="marca"><span class="marca-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Saúde+<small>Pronto atendimento</small></span></span>
+      <div>
+        <h1>Do cadastro à alta, cada paciente no lugar certo.</h1>
+        <p>Recepção, triagem com classificação de risco, consultório, sala de medicação e painel de chamadas na TV — tudo conectado em tempo real.</p>
+        <div class="etapas">
+          <div><b>1</b><span><strong>Recepção</strong> cadastra o paciente e gera a senha.</span></div>
+          <div><b>2</b><span><strong>Triagem</strong> mede os sinais vitais e define a cor de risco.</span></div>
+          <div><b>3</b><span><strong>Médico</strong> atende pela ordem de gravidade e prescreve.</span></div>
+          <div><b>4</b><span><strong>Medicação</strong> administra e dá a alta. A <strong>TV</strong> chama cada etapa.</span></div>
+        </div>
+      </div>
+      <a href="tv.html" target="_blank" rel="noopener" style="color:#fff;font-weight:600">📺 Abrir o painel da TV da sala de espera</a>
+    </section>
 
-<script>
-function login() {
-  fetch("/login", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      usuario: usuario.value,
-      senha: senha.value
-    })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if(data.tipo === "triagem") location.href = "triagem.html";
-    if(data.tipo === "medico") location.href = "medico.html";
-    if(data.tipo === "atendimento") location.href = "atendimento.html";
-  });
-}
-</script>
+    <section class="login-form">
+      <form class="caixa" id="form" novalidate>
+        <h2>Entrar</h2>
+        <p class="sub">Use o usuário do seu setor.</p>
+        <div class="campos">
+          <div class="campo">
+            <label for="usuario">Usuário</label>
+            <input id="usuario" autocomplete="username" autocapitalize="none" required>
+          </div>
+          <div class="campo">
+            <label for="senha">Senha</label>
+            <div class="com-sufixo">
+              <input id="senha" type="password" autocomplete="current-password" required>
+              <button type="button" id="ver" class="btn btn-fantasma btn-p" style="position:absolute;right:4px;top:50%;transform:translateY(-50%)">ver</button>
+            </div>
+          </div>
+          <button class="btn btn-grande" id="entrar" type="submit">Entrar</button>
+        </div>
+        <div class="erro-form" id="erro" role="alert"></div>
+
+        <div class="demo">
+          <b>Acesso de demonstração</b> — toque para preencher:
+          <div class="demo-lista">
+            <button type="button" data-u="atendimento" data-s="123">Recepção</button>
+            <button type="button" data-u="triagem" data-s="123">Triagem</button>
+            <button type="button" data-u="medico" data-s="123">Médico</button>
+            <button type="button" data-u="enfermagem" data-s="123">Medicação</button>
+            <button type="button" data-u="admin" data-s="admin123">Administração</button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    const s = SP.sessao();
+    if (s && s.token) location.replace((SP.PERFIS[s.tipo] || SP.PERFIS.atendimento).inicio);
+
+    const erro = document.getElementById("erro");
+    const mostrarErro = m => { erro.textContent = m; erro.classList.toggle("visivel", !!m); };
+    if (new URLSearchParams(location.search).has("expirou")) mostrarErro("Sua sessão expirou. Entre novamente.");
+
+    document.getElementById("ver").onclick = e => {
+      const i = document.getElementById("senha");
+      i.type = i.type === "password" ? "text" : "password";
+      e.target.textContent = i.type === "password" ? "ver" : "ocultar";
+    };
+    document.querySelectorAll(".demo-lista button").forEach(b => b.onclick = () => {
+      document.getElementById("usuario").value = b.dataset.u;
+      document.getElementById("senha").value = b.dataset.s;
+      document.getElementById("entrar").focus();
+    });
+
+    document.getElementById("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      mostrarErro("");
+      const usuario = document.getElementById("usuario").value.trim();
+      const senha = document.getElementById("senha").value;
+      if (!usuario || !senha) return mostrarErro("Informe usuário e senha.");
+      const botao = document.getElementById("entrar");
+      botao.disabled = true; botao.textContent = "Entrando…";
+      try {
+        const r = await SP.API.post("/login", { usuario, senha });
+        SP.salvarSessao(r);
+        location.href = (SP.PERFIS[r.tipo] || SP.PERFIS.atendimento).inicio;
+      } catch (err) {
+        mostrarErro(err.message);
+        botao.disabled = false; botao.textContent = "Entrar";
+      }
+    });
+  </script>
 </body>
 </html>

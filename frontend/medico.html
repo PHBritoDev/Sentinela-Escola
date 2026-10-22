@@ -1,218 +1,196 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-<link rel="stylesheet" href="css/style.css">
-
-
-<style>
-  .btn-tv {
-    background: green;
-    color: white;
-    border: none;
-    padding: 8px 14px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
-    margin-top: 8px;
-  }
-
-  .btn-tv:hover{
-    background: green;
-  }
-  .btn-abrir-tv{
-    background: blue;
-  }
-  .consultorio-input{
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 16px;
-    background: white;
-    padding: 10px 14px;
-    border-radius: 6px;
-    border: 1px solid white;
-
-  }
-
-  .consultorio-input label{
-    font-weight: bold;
-  }
-  .consultorio-input input{
-    width: 60px;
-    text-align: center;
-    font-size: 18px;
-    font-weight: bold;
-    border: 1px solid white;
-    border-radius: 4px
-  }
-
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f766e">
+  <title>Consultório · Saúde+</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
-
-<div class="Container">
-
- <div style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-    ">
-        <h2 style="margin: 0;">🏥 Triagem Hospitalar</h2>
-
-        <button
-            class="btn-abrir-tv"
-            onclick="window.open('tv.html', '_blank')">
-            Abrir Tela Da TV
-        </button>
+  <main class="pagina">
+    <div class="cabecalho-pagina">
+      <div>
+        <h1>Consultório médico</h1>
+        <p>A fila segue a cor de risco: quem é mais grave aparece primeiro, mesmo que tenha chegado depois.</p>
+      </div>
+      <div class="acoes">
+        <label class="rotulo" for="consultorio" style="margin:0;align-self:center">Meu consultório</label>
+        <input id="consultorio" style="width:70px;text-align:center;font-weight:800" maxlength="3" value="01">
+      </div>
     </div>
 
-<div class="consultorio-input">
-  <label> Meu Consultorio:</label>
- <input type="text" id="consultorio-num" value="01">
- <span style="color: darkgrey; 
- font-size: 13px;">Este numero sera exebido na TV ao chamar o paciente,
- </span>
-</div>
-
-
-
-  <h2>🩺 Painel Médico</h2>
-
-  <div id="triagens"></div>
-
-  <hr>
-
-  <h3>Consulta</h3>
-
-  <input id="paciente" placeholder="Paciente" readonly>
-
-  <input id="diagnostico" placeholder="Diagnóstico">
-
-  <select id="medicacao">
-    <option value="">Selecione a medicação</option>
-  </select>
-
-  <textarea id="obs" placeholder="Observações"></textarea>
-
-  <button onclick="salvar()">Salvar</button>
-
-</div>
-
-<script>
-
-let triagensCarregadas = [];
-
-function carregar() {
-  fetch("/triagens")
-    .then(r => r.json())
-    .then(data => {
-      triagensCarregadas = data;
-
-      const div = document.getElementById("triagens");
-      div.innerHTML = "";
-
-      data.forEach((t, index) => {
-        div.innerHTML += `
-          <div class="card">
-            <h3>${t.nome}</h3>
-
-            <p><b>Sintoma:</b> ${t.sintoma || "Não informado"}</p>
-
-            <p><b>Temperatura:</b> ${t.temperatura || "Não informada"}°C</p>
-
-            <p>
-              <span class="${t.risco}">
-                ${t.risco}
-              </span>
-            </p>
-
-            <p><b>Alergia:</b> ${t.alergia || "Nenhuma"}</p>
-
-            <p><b>Observação:</b> ${t.observacao || "Nenhuma"}</p>
-
-            <button onclick="selecionar(${index})">
-              Atender
-            </button>
+    <div class="grade grade-2">
+      <section class="cartao">
+        <div class="cartao-cabeca" style="flex-direction:column;align-items:stretch">
+          <div class="abas" role="tablist">
+            <button class="ativo" data-aba="fila">Fila <span class="contagem" id="c-fila">0</span></button>
+            <button data-aba="atendidos">Atendidos hoje <span class="contagem" id="c-atendidos">0</span></button>
           </div>
-        `;
-      });
+        </div>
+        <ul class="fila" id="fila"></ul>
+      </section>
+
+      <section class="cartao" id="painel">
+        <div class="vazio" id="sem-paciente"><span class="emoji">👩‍⚕️</span><b>Selecione um paciente</b><br>Chame pela TV, abra a consulta e registre a conduta.</div>
+        <div id="ficha" hidden></div>
+      </section>
+    </div>
+  </main>
+
+  <template id="tpl-consulta">
+    <form class="cartao-corpo" id="form-consulta" novalidate style="border-top:1px solid var(--borda)">
+      <h3 class="secao-titulo" style="margin-top:0">Consulta</h3>
+      <div class="campos">
+        <div class="campo"><label for="diagnostico">Hipótese diagnóstica *</label><input id="diagnostico" maxlength="200" placeholder="Ex.: Síndrome gripal (J11)"></div>
+        <div class="campo">
+          <span class="rotulo">Prescrição</span>
+          <div class="receita" id="receita"></div>
+          <button type="button" class="btn btn-secundario btn-p" id="add-med" style="margin-top:8px">+ Adicionar medicação</button>
+        </div>
+        <div class="campo"><label for="orientacoes">Orientações / evolução</label><textarea id="orientacoes" placeholder="Exame físico, conduta, orientações de alta, retorno…"></textarea></div>
+        <div class="campo">
+          <span class="rotulo">Desfecho *</span>
+          <div class="opcoes">
+            <label class="opcao"><input type="radio" name="desfecho" value="alta" checked><b>Alta</b><span>Liberado com orientações</span></label>
+            <label class="opcao"><input type="radio" name="desfecho" value="medicacao"><b>Medicação</b><span>Envia à sala de medicação</span></label>
+            <label class="opcao"><input type="radio" name="desfecho" value="observacao"><b>Observação</b><span>Fica em observação</span></label>
+            <label class="opcao"><input type="radio" name="desfecho" value="encaminhamento"><b>Encaminhar</b><span>Outro serviço / internação</span></label>
+          </div>
+        </div>
+        <button class="btn btn-grande" id="finalizar" type="submit">Finalizar consulta</button>
+      </div>
+    </form>
+  </template>
+
+  <script src="js/app.js"></script>
+  <script>
+    const sessao = SP.proteger("medico");
+    const { API, esc, hora, espera, seloRisco, seloStatus, seloPref, toast, acao, RISCOS } = SP;
+    const $ = id => document.getElementById(id);
+    let fila = [], atendidos = [], aba = "fila", atualId = null, medicamentos = [], assinaturaFicha = "";
+
+    $("consultorio").value = localStorage.getItem("saudeplus.consultorio") || "01";
+    $("consultorio").onchange = () => localStorage.setItem("saudeplus.consultorio", $("consultorio").value.trim() || "01");
+    SP.referencias().then(r => { medicamentos = r.medicamentos; });
+
+    document.querySelectorAll(".abas button").forEach(b => b.onclick = () => {
+      aba = b.dataset.aba; document.querySelectorAll(".abas button").forEach(x => x.classList.toggle("ativo", x === b)); renderFila();
     });
-}
 
-function selecionar(index) {
-  const t = triagensCarregadas[index];
+    function atrasado(p) {
+      if (!p.triagem) return false;
+      return SP.minutosDesde(p.triagem.em) > RISCOS[p.triagem.risco].esperaMin;
+    }
 
-  document.getElementById("paciente").value = t.nome;
-  document.getElementById("obs").value = t.observacao || "";
+    function renderFila() {
+      $("c-fila").textContent = fila.length; $("c-atendidos").textContent = atendidos.length;
+      const lista = aba === "fila" ? fila : atendidos;
+      if (!lista.length) { $("fila").innerHTML = '<li class="vazio"><span class="emoji">' + (aba === "fila" ? "✨" : "📋") + "</span>" + (aba === "fila" ? "Nenhum paciente aguardando consulta." : "Nenhum atendimento finalizado hoje.") + "</li>"; return; }
+      $("fila").innerHTML = lista.map(p => {
+        const r = p.triagem && p.triagem.risco;
+        const meu = p.status === "em_atendimento" && p.medico === sessao.nome;
+        return '<li class="item-fila' + (p.id === atualId ? " selecionado" : "") + '" data-id="' + p.id + '" data-risco="' + (r || "") + '" tabindex="0">' +
+          '<span class="senha">' + esc(p.senha) + '</span><div><div class="nome">' + esc(p.nome) + '</div><div class="meta">' + seloRisco(r) + seloPref(p) +
+          "<span>" + esc(p.triagem ? p.triagem.sintomaNome : "") + "</span></div></div>" +
+          '<div class="lado">' + (aba === "fila" ? (p.status === "em_atendimento" ? '<span class="selo status-em_atendimento">' + (meu ? "Comigo" : esc(p.medico)) + "</span>" : '<span class="espera' + (atrasado(p) ? " atrasado" : "") + '" title="Tempo desde a triagem">' + (atrasado(p) ? "⚠ " : "") + espera(p.triagem && p.triagem.em) + "</span>")
+            : seloStatus(p.status) + '<span class="espera">' + hora(p.consulta && p.consulta.em) + "</span>") + "</div></li>";
+      }).join("");
+    }
 
-  if (t.alergia && t.alergia !== "Nenhuma") {
-    alert("⚠️ Paciente possui alergia: " + t.alergia);
-  }
-}
+    function sinal(rotulo, valor, sufixo, fora) {
+      return '<div class="sinal' + (fora ? " fora" : "") + '"><span>' + rotulo + "</span><b>" + (valor === null || valor === undefined || valor === "" ? "—" : esc(valor) + (sufixo || "")) + "</b></div>";
+    }
 
-function carregarMedicacoes() {
-  fetch("/lista-medicacoes")
-    .then(r => r.json())
-    .then(data => {
-      const select = document.getElementById("medicacao");
-
-      select.innerHTML = `
-        <option value="">Selecione a medicação</option>
-      `;
-
-      data.forEach(med => {
-        const option = document.createElement("option");
-        option.value = med;
-        option.textContent = med;
-        select.appendChild(option);
+    function renderFicha() {
+      const p = [...fila, ...atendidos].find(x => x.id === atualId);
+      assinaturaFicha = p ? p.id + p.status : "";
+      $("sem-paciente").hidden = !!p; $("ficha").hidden = !p;
+      if (!p) return;
+      const t = p.triagem || {};
+      const alergia = t.alergia && !/^nega/i.test(t.alergia);
+      const emConsulta = p.status === "em_atendimento";
+      const podeAtender = ["aguardando_medico", "em_atendimento"].includes(p.status);
+      $("ficha").innerHTML =
+        '<div class="cartao-cabeca"><div class="ficha-topo"><div class="ficha-senha" style="background:' + (t.risco ? RISCOS[t.risco].cor : "#0f1f2e") + '">' + esc(p.senha) + '</div><div><h2>' + esc(p.nome) + '</h2><div class="meta"><span>' + (p.idade != null ? p.idade + " anos" : "Idade não informada") + "</span><span>" + esc(p.convenio) + "</span>" + seloRisco(t.risco) + seloPref(p) + "</div></div></div>" +
+        (podeAtender ? '<div class="acoes"><button class="btn btn-azul" id="chamar">📺 Chamar na TV</button>' + (emConsulta ? "" : '<button class="btn" id="iniciar">Iniciar consulta</button>') + "</div>" : seloStatus(p.status)) + "</div>" +
+        '<div class="cartao-corpo">' +
+        (alergia ? '<div class="alerta alerta-perigo" style="margin-bottom:14px"><span style="font-size:20px">⚠️</span><div><b>ALERGIA: ' + esc(t.alergia) + "</b>Confira antes de prescrever.</div></div>" : "") +
+        (t.motivos && t.motivos.length ? '<div class="alerta alerta-aviso" style="margin-bottom:14px"><span style="font-size:20px">🚩</span><div><b>Sinais de alerta da triagem</b>' + t.motivos.map(esc).join(" · ") + "</div></div>" : "") +
+        '<div class="sinais">' + sinal("Temperatura", t.temperatura, " °C", t.temperatura >= 38) + sinal("Pressão", t.pressao, "", false) + sinal("Freq. cardíaca", t.frequencia, " bpm", t.frequencia > 100) + sinal("Saturação", t.saturacao, "%", t.saturacao && t.saturacao < 94) + sinal("Dor", t.dor, "/10", t.dor >= 5) + sinal("Peso", t.peso, " kg", false) + "</div>" +
+        '<h3 class="secao-titulo">Queixa e observações</h3><p><b>' + esc(t.sintomaNome || "—") + "</b>" + (t.observacao ? " — " + esc(t.observacao) : "") + '</p><p style="color:var(--texto-suave);font-size:13px;margin-top:4px">Triado por ' + esc(t.por || "—") + " às " + hora(t.em) + "</p>" +
+        (p.consulta ? '<h3 class="secao-titulo">Consulta registrada</h3><p><b>' + esc(p.consulta.diagnostico) + "</b> · " + esc(p.consulta.medico) + " às " + hora(p.consulta.em) + "</p>" + (p.consulta.medicacoes.length ? "<ul>" + p.consulta.medicacoes.map(m => "<li>" + esc(m.nome) + (m.posologia ? " — " + esc(m.posologia) : "") + (m.via ? " (" + esc(m.via) + ")" : "") + "</li>").join("") + "</ul>" : "") + (p.consulta.orientacoes ? "<p>" + esc(p.consulta.orientacoes) + "</p>" : "") : "") +
+        '<h3 class="secao-titulo">Linha do tempo</h3><ul class="linha-tempo">' + p.historico.map(h => "<li><time>" + hora(h.em) + "</time><span>" + esc(h.evento) + ' <span style="color:var(--texto-suave)">· ' + esc(h.por) + "</span></span></li>").join("") + "</ul>" +
+        "</div>";
+      if (emConsulta) {
+        $("ficha").appendChild($("tpl-consulta").content.cloneNode(true));
+        montarConsulta(p);
+      }
+      const ch = $("chamar"); if (ch) ch.onclick = () => acao(ch, () => SP.chamarNaTv(p.id, "consultorio", $("consultorio").value));
+      const ini = $("iniciar"); if (ini) ini.onclick = () => acao(ini, async () => {
+        await API.post("/pacientes/" + p.id + "/iniciar", { consultorio: $("consultorio").value });
+        await SP.chamarNaTv(p.id, "consultorio", $("consultorio").value).catch(() => {});
+        await carregar();
       });
-    });
-}
+    }
 
-function salvar() {
-  const paciente = document.getElementById("paciente").value;
-  const diagnostico = document.getElementById("diagnostico").value;
-  const medicacao = document.getElementById("medicacao").value;
-  const obs = document.getElementById("obs").value;
+    function linhaReceita() {
+      const div = document.createElement("div");
+      div.className = "receita-linha";
+      div.innerHTML = '<select class="r-nome"><option value="">Medicação…</option>' + medicamentos.map(m => "<option>" + esc(m) + "</option>").join("") + '</select><input class="r-pos" placeholder="Posologia (ex.: 1 cp agora)"><select class="r-via"><option>Oral</option><option>Intravenosa</option><option>Intramuscular</option><option>Inalatória</option><option>Subcutânea</option></select><button type="button" class="btn btn-fantasma btn-p" title="Remover">✕</button>';
+      div.querySelector("button").onclick = () => div.remove();
+      return div;
+    }
 
-  if (!paciente) {
-    alert("Selecione um paciente clicando em Atender.");
-    return;
-  }
+    function montarConsulta(p) {
+      $("add-med").onclick = () => $("receita").appendChild(linhaReceita());
+      $("form-consulta").addEventListener("change", e => {
+        if (e.target.name === "desfecho" && e.target.value === "medicacao" && !$("receita").children.length) $("receita").appendChild(linhaReceita());
+      });
+      if (p.triagem && p.triagem.alergia && !/^nega/i.test(p.triagem.alergia)) {
+        $("form-consulta").addEventListener("change", e => {
+          if (e.target.classList.contains("r-nome") && e.target.value && p.triagem.alergia.toLowerCase().split(/[,;/ ]+/).some(a => a.length > 3 && e.target.value.toLowerCase().includes(a)))
+            toast("⚠️ Atenção: o paciente relatou alergia a " + p.triagem.alergia + ".", "erro");
+        });
+      }
+      $("form-consulta").addEventListener("submit", e => {
+        e.preventDefault();
+        const diagnostico = $("diagnostico").value.trim();
+        const desfecho = document.querySelector("input[name=desfecho]:checked").value;
+        const medicacoes = [...document.querySelectorAll(".receita-linha")].map(l => ({ nome: l.querySelector(".r-nome").value, posologia: l.querySelector(".r-pos").value, via: l.querySelector(".r-via").value })).filter(m => m.nome);
+        if (diagnostico.length < 3) { toast("Descreva a hipótese diagnóstica.", "erro"); $("diagnostico").focus(); return; }
+        if (desfecho === "medicacao" && !medicacoes.length) { toast("Escolha ao menos uma medicação para a sala de medicação.", "erro"); return; }
+        acao($("finalizar"), async () => {
+          const r = await API.post("/pacientes/" + p.id + "/consulta", { diagnostico, medicacoes, orientacoes: $("orientacoes").value, desfecho });
+          toast("Consulta de " + r.nome + " finalizada" + (r.status === "aguardando_medicacao" ? " · enviado(a) à medicação." : "."), "sucesso");
+          atualId = null; await carregar();
+          const prox = fila.find(x => x.status === "aguardando_medico");
+          if (prox) { atualId = prox.id; renderFila(); renderFicha(); }
+        });
+      });
+    }
 
-  if (!medicacao) {
-    alert("Selecione uma medicação.");
-    return;
-  }
+    $("fila").addEventListener("click", e => { const li = e.target.closest(".item-fila"); if (li) { atualId = li.dataset.id; renderFila(); renderFicha(); } });
+    $("fila").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.dataset.id) { atualId = e.target.dataset.id; renderFila(); renderFicha(); } });
 
-  fetch("/consulta", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      paciente,
-      diagnostico,
-      medicacao,
-      obs
-    })
-  })
-  .then(r => r.json())
-  .then(() => {
-    alert("Consulta salva");
-
-    document.getElementById("diagnostico").value = "";
-    document.getElementById("medicacao").value = "";
-    document.getElementById("obs").value = "";
-  });
-}
-
-carregar();
-carregarMedicacoes();
-
-</script>
-
+    async function carregar() {
+      try {
+        const [f, todos] = await Promise.all([
+          API.get("/pacientes?status=aguardando_medico,em_atendimento&fila=medico"),
+          API.get("/pacientes?status=aguardando_medicacao,finalizado&hoje=1")
+        ]);
+        fila = f;
+        atendidos = todos.filter(p => p.consulta).sort((a, b) => new Date(b.consulta.em) - new Date(a.consulta.em));
+        renderFila();
+        // só redesenha a ficha se o paciente mudou (para não apagar o que o médico está digitando)
+        const p = [...fila, ...atendidos].find(x => x.id === atualId);
+        if ((p ? p.id + p.status : "") !== assinaturaFicha) renderFicha();
+      } catch (e) { toast(e.message, "erro"); }
+    }
+    carregar();
+    SP.aCada(carregar, 7000);
+  </script>
 </body>
 </html>

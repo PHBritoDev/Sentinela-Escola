@@ -1,64 +1,93 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f766e">
+  <title>Medicação · Saúde+</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
+  <main class="pagina">
+    <div class="cabecalho-pagina">
+      <div>
+        <h1>Sala de medicação</h1>
+        <p>Prescrições enviadas pelo consultório. Chame o paciente, administre e registre a alta.</p>
+      </div>
+      <div class="acoes">
+        <label class="rotulo" for="sala" style="margin:0;align-self:center">Sala</label>
+        <input id="sala" style="width:70px;text-align:center;font-weight:800" maxlength="3" value="01">
+      </div>
+    </div>
 
-<div class="Container">
+    <div class="indicadores" id="indicadores"></div>
 
-  <h2>💊 Medicações Prescritas</h2>
+    <section class="cartao">
+      <div class="cartao-cabeca">
+        <div class="abas" style="width:min(420px,100%)">
+          <button class="ativo" data-aba="pendentes">Pendentes <span class="contagem" id="c-pend">0</span></button>
+          <button data-aba="feitas">Administradas hoje <span class="contagem" id="c-feitas">0</span></button>
+        </div>
+      </div>
+      <div class="cartao-corpo" id="lista" style="display:grid;gap:14px"></div>
+    </section>
+  </main>
 
-  <!-- IMPLEMENTADO: local onde a lista de medicações será exibida -->
-  <div id="listaMedicacoes"></div>
+  <script src="js/app.js"></script>
+  <script>
+    SP.proteger("medicacoes");
+    const { API, esc, hora, espera, seloRisco, seloPref, toast, acao } = SP;
+    const $ = id => document.getElementById(id);
+    let pendentes = [], feitas = [], aba = "pendentes";
 
-</div>
+    $("sala").value = localStorage.getItem("saudeplus.salaMedicacao") || "01";
+    $("sala").onchange = () => localStorage.setItem("saudeplus.salaMedicacao", $("sala").value.trim() || "01");
+    document.querySelectorAll(".abas button").forEach(b => b.onclick = () => { aba = b.dataset.aba; document.querySelectorAll(".abas button").forEach(x => x.classList.toggle("ativo", x === b)); render(); });
 
-<script>
+    function cartao(p) {
+      const c = p.consulta || {}, t = p.triagem || {};
+      const alergia = t.alergia && !/^nega/i.test(t.alergia);
+      return '<article class="cartao" style="box-shadow:none">' +
+        '<div class="cartao-cabeca"><div class="ficha-topo"><div class="ficha-senha" style="min-width:64px;height:52px;font-size:18px">' + esc(p.senha) + '</div><div><h2 style="font-size:18px">' + esc(p.nome) + '</h2><div class="meta">' + seloRisco(t.risco) + seloPref(p) + "<span>" + esc(c.diagnostico) + "</span><span>" + esc(c.medico) + " · " + hora(c.em) + "</span></div></div></div>" +
+        (aba === "pendentes"
+          ? '<div class="acoes"><button class="btn btn-azul" data-chamar="' + p.id + '">📺 Chamar</button><button class="btn" data-feito="' + p.id + '">✓ Medicação administrada</button></div>'
+          : '<span class="selo status-finalizado">Administrada ' + hora(p.medicacao && p.medicacao.em) + " · " + esc(p.medicacao && p.medicacao.por) + "</span>") + "</div>" +
+        '<div class="cartao-corpo">' + (alergia ? '<div class="alerta alerta-perigo" style="margin-bottom:12px"><span>⚠️</span><div><b>Alergia: ' + esc(t.alergia) + "</b></div></div>" : "") +
+        '<div class="rolagem-x"><table class="tabela"><thead><tr><th>Medicação</th><th>Posologia</th><th>Via</th></tr></thead><tbody>' +
+        (c.medicacoes || []).map(m => "<tr><td><b>" + esc(m.nome) + "</b></td><td>" + esc(m.posologia || "—") + "</td><td>" + esc(m.via || "—") + "</td></tr>").join("") +
+        "</tbody></table></div>" + (c.orientacoes ? '<p style="margin-top:10px;color:var(--texto-suave)">' + esc(c.orientacoes) + "</p>" : "") +
+        (aba === "pendentes" ? '<p class="espera" style="margin-top:10px">Aguardando há ' + espera(c.em) + "</p>" : "") + "</div></article>";
+    }
 
-// IMPLEMENTADO: busca as consultas salvas e mostra as medicações
-function carregarMedicacoesPrescritas() {
-  fetch("/medicacoes")
-    .then(r => r.json())
-    .then(data => {
-      const div = document.getElementById("listaMedicacoes");
+    function render() {
+      $("c-pend").textContent = pendentes.length; $("c-feitas").textContent = feitas.length;
+      $("indicadores").innerHTML = [["Aguardando medicação", pendentes.length], ["Administradas hoje", feitas.length], ["Itens prescritos pendentes", pendentes.reduce((s, p) => s + ((p.consulta && p.consulta.medicacoes.length) || 0), 0)]]
+        .map(([a, b]) => '<div class="indicador"><span>' + a + "</span><b>" + b + "</b></div>").join("");
+      const lista = aba === "pendentes" ? pendentes : feitas;
+      $("lista").innerHTML = lista.length ? lista.map(cartao).join("") : '<div class="vazio"><span class="emoji">💊</span>' + (aba === "pendentes" ? "Nenhuma medicação pendente." : "Nada administrado hoje ainda.") + "</div>";
+    }
 
-      div.innerHTML = "";
-
-      if (data.length === 0) {
-        div.innerHTML = "<p>Nenhuma medicação prescrita.</p>";
-        return;
+    $("lista").addEventListener("click", e => {
+      const ch = e.target.closest("[data-chamar]"), ok = e.target.closest("[data-feito]");
+      if (ch) acao(ch, () => SP.chamarNaTv(ch.dataset.chamar, "medicacao", $("sala").value));
+      if (ok) {
+        const p = pendentes.find(x => x.id === ok.dataset.feito);
+        if (p && confirm("Confirmar que a medicação de " + p.nome + " foi administrada? O paciente receberá alta.")) acao(ok, async () => { await API.post("/pacientes/" + p.id + "/medicacao"); toast("Medicação registrada · alta de " + p.nome + ".", "sucesso"); carregar(); });
       }
-
-      data.forEach(c => {
-        div.innerHTML += `
-          <div class="card">
-            <h3>${c.paciente}</h3>
-
-            <p>
-              <b>Medicação:</b>
-              ${c.medicacao}
-            </p>
-
-            <p>
-              <b>Diagnóstico:</b>
-              ${c.diagnostico}
-            </p>
-
-            <p>
-              <b>Observações:</b>
-              ${c.obs || "Nenhuma"}
-            </p>
-          </div>
-        `;
-      });
     });
-}
 
-carregarMedicacoesPrescritas();
-
-</script>
-
+    async function carregar() {
+      try {
+        const [pend, fin] = await Promise.all([API.get("/pacientes?status=aguardando_medicacao"), API.get("/pacientes?status=finalizado&hoje=1")]);
+        pendentes = pend.sort((a, b) => new Date(a.consulta.em) - new Date(b.consulta.em));
+        feitas = fin.filter(p => p.medicacao).sort((a, b) => new Date(b.medicacao.em) - new Date(a.medicacao.em));
+        render();
+      } catch (e) { toast(e.message, "erro"); }
+    }
+    carregar();
+    SP.aCada(carregar, 8000);
+  </script>
 </body>
 </html>

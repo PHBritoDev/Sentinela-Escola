@@ -1,59 +1,181 @@
 <!DOCTYPE html>
-<html>
-<link rel="stylesheet" href="css/style.css">
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f766e">
+  <title>Recepção · Saúde+</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
 <body>
-<div class="Container">
-<h2>Atendimento</h2>
+  <main class="pagina">
+    <div class="cabecalho-pagina">
+      <div>
+        <h1>Recepção</h1>
+        <p>Cadastre o paciente, entregue a senha e acompanhe a fila do dia.</p>
+      </div>
+      <div class="acoes">
+        <label class="rotulo" for="guiche" style="margin:0;align-self:center">Meu guichê</label>
+        <input id="guiche" style="width:70px;text-align:center;font-weight:800" maxlength="3" value="01">
+      </div>
+    </div>
 
-<input id="nome" placeholder="Nome">
-<input id="cpf" placeholder="CPF">
+    <div class="indicadores" id="indicadores"></div>
 
-<select id="tipo">
-  <option>Convenio</option>
-  <option>Particular</option>
-</select>
+    <div class="grade grade-2">
+      <section class="cartao">
+        <div class="cartao-cabeca"><div><h2>Novo paciente</h2><p>Campos com * são obrigatórios</p></div></div>
+        <form class="cartao-corpo campos" id="form" novalidate>
+          <div class="campo">
+            <label for="nome">Nome completo *</label>
+            <input id="nome" autocomplete="off" maxlength="100" required>
+          </div>
+          <div class="campos-2">
+            <div class="campo">
+              <label for="cpf">CPF *</label>
+              <input id="cpf" inputmode="numeric" placeholder="000.000.000-00" required>
+              <div class="dica" id="cpf-dica">Somente números; a máscara é automática.</div>
+            </div>
+            <div class="campo">
+              <label for="nascimento">Nascimento</label>
+              <input id="nascimento" type="date">
+              <div class="dica" id="idade-dica">60+ entra como preferencial.</div>
+            </div>
+          </div>
+          <div class="campos-2">
+            <div class="campo">
+              <label for="telefone">Telefone</label>
+              <input id="telefone" type="tel" inputmode="numeric" placeholder="(00) 00000-0000">
+            </div>
+            <div class="campo">
+              <label for="convenio">Convênio</label>
+              <select id="convenio">
+                <option>Particular</option><option>SUS</option><option>Unimed</option><option>Amil</option>
+                <option>Bradesco Saúde</option><option>SulAmérica</option><option>Hapvida</option><option>Outro</option>
+              </select>
+            </div>
+          </div>
+          <div class="campo">
+            <label for="preferencial">Atendimento preferencial</label>
+            <select id="preferencial">
+              <option value="">Não</option><option>Gestante</option><option>Lactante / criança de colo</option>
+              <option>Pessoa com deficiência</option><option>Idoso (60+)</option><option>Autista (TEA)</option>
+            </select>
+          </div>
+          <button class="btn btn-grande" id="cadastrar" type="submit">Cadastrar e gerar senha</button>
+          <div id="ticket" hidden></div>
+        </form>
+      </section>
 
-<input type="file" id="foto">
+      <section class="cartao">
+        <div class="cartao-cabeca">
+          <div><h2>Pacientes de hoje</h2><p id="resumo-lista">Carregando…</p></div>
+          <div class="busca" style="width:min(260px,50%)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input id="busca" placeholder="Buscar nome, CPF ou senha">
+          </div>
+        </div>
+        <ul class="fila" id="lista" style="max-height:none"></ul>
+      </section>
+    </div>
+  </main>
 
-<button onclick="cadastrar()">Cadastrar</button>
-</div>
+  <script src="js/app.js"></script>
+  <script>
+    SP.proteger("atendimento");
+    const { API, esc, hora, espera, seloStatus, seloRisco, seloPref, toast, acao } = SP;
+    const $ = id => document.getElementById(id);
+    let pacientes = [];
 
-<script>
-async function cadastrar() {
-  const nome = document.getElementById("nome").value.trim();
-  const cpf = document.getElementById("cpf").value.trim();
-  const tipo = document.getElementById("tipo").value;
-  const botao = document.querySelector('button[onclick="cadastrar()"]');
+    const guiche = $("guiche");
+    guiche.value = localStorage.getItem("saudeplus.guiche") || "01";
+    guiche.onchange = () => localStorage.setItem("saudeplus.guiche", guiche.value.trim() || "01");
 
-  if (!nome || !cpf) {
-    alert("Informe o nome e o CPF do paciente.");
-    return;
-  }
-
-  if (botao) botao.disabled = true;
-
-  try {
-    const resposta = await fetch("/atendimento", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome, cpf, tipo })
+    SP.mascaraCpf($("cpf"), d => {
+      const dica = $("cpf-dica"), ok = SP.cpfValido(d);
+      $("cpf").classList.toggle("valido", ok);
+      $("cpf").classList.toggle("invalido", d.length === 11 && !ok);
+      dica.classList.toggle("erro", d.length === 11 && !ok);
+      dica.textContent = d.length < 11 ? "Somente números; a máscara é automática." : ok ? "✓ CPF válido" : "CPF inválido — confira os dígitos.";
     });
-    const dados = await resposta.json().catch(() => ({}));
+    SP.mascaraTelefone($("telefone"));
+    $("nascimento").max = new Date().toISOString().slice(0, 10);
+    $("nascimento").onchange = () => {
+      const v = $("nascimento").value; if (!v) return;
+      const n = new Date(v), h = new Date();
+      let a = h.getFullYear() - n.getFullYear(); if (h < new Date(h.getFullYear(), n.getMonth(), n.getDate())) a--;
+      $("idade-dica").textContent = a + " anos" + (a >= 60 ? " · preferencial ★" : "");
+      if (a >= 60 && !$("preferencial").value) $("preferencial").value = "Idoso (60+)";
+    };
 
-    if (!resposta.ok) {
-      throw new Error(dados.erro || "O servidor recusou o cadastro.");
+    $("form").addEventListener("submit", e => {
+      e.preventDefault();
+      const nome = $("nome").value.trim(), cpf = $("cpf").value;
+      if (nome.length < 3) { toast("Informe o nome completo do paciente.", "erro"); $("nome").focus(); return; }
+      if (!SP.cpfValido(cpf)) { toast("CPF inválido. Confira os números.", "erro"); $("cpf").focus(); return; }
+      acao($("cadastrar"), async () => {
+        const p = await API.post("/pacientes", {
+          nome, cpf, nascimento: $("nascimento").value, telefone: $("telefone").value,
+          convenio: $("convenio").value, motivoPreferencial: $("preferencial").value
+        });
+        mostrarTicket(p);
+        $("form").reset(); $("cpf").className = ""; $("idade-dica").textContent = "60+ entra como preferencial."; $("cpf-dica").textContent = "Somente números; a máscara é automática.";
+        toast("Paciente cadastrado · senha " + p.senha, "sucesso");
+        carregar();
+      });
+    });
+
+    function mostrarTicket(p) {
+      const t = $("ticket");
+      t.hidden = false;
+      t.innerHTML = '<div class="ticket"><div style="font-weight:800">Saúde+ · Pronto atendimento</div><div class="numero">' + esc(p.senha) + '</div>' +
+        '<div><b>' + esc(p.nome) + '</b></div><div style="color:var(--texto-suave);font-size:13px">' + new Date(p.criadoEm).toLocaleString("pt-BR") + (p.preferencial ? " · Preferencial" : "") +
+        '</div><div style="margin-top:8px;font-size:13px">Aguarde ser chamado(a) no painel para a <b>triagem</b>.</div>' +
+        '<div class="acoes" style="justify-content:center;margin-top:12px"><button type="button" class="btn btn-secundario btn-p" onclick="window.print()">🖨️ Imprimir senha</button>' +
+        '<button type="button" class="btn btn-fantasma btn-p" onclick="document.getElementById(\'ticket\').hidden=true">Fechar</button></div></div>';
     }
 
-    alert("Paciente enviado para triagem.");
-    document.getElementById("nome").value = "";
-    document.getElementById("cpf").value = "";
-  } catch (erro) {
-    console.error("Erro ao cadastrar paciente:", erro);
-    alert("Não foi possível cadastrar o paciente. Confira se o servidor está ativo.");
-  } finally {
-    if (botao) botao.disabled = false;
-  }
-}
-</script>
+    function render() {
+      const termo = $("busca").value.trim().toLowerCase();
+      const lista = pacientes.filter(p => !termo || [p.nome, p.cpf, p.senha].some(v => String(v).toLowerCase().includes(termo)));
+      const cont = s => pacientes.filter(p => s.includes(p.status)).length;
+      $("indicadores").innerHTML = [
+        ["Cadastrados hoje", pacientes.length, "no sistema"],
+        ["Aguardando triagem", cont(["aguardando_triagem"]), "na sala de espera"],
+        ["Aguardando médico", cont(["aguardando_medico", "em_atendimento"]), "triados ou em consulta"],
+        ["Altas", cont(["finalizado"]), "atendimentos concluídos"]
+      ].map(([a, b, c]) => '<div class="indicador"><span>' + a + "</span><b>" + b + "</b><small>" + c + "</small></div>").join("");
+      $("resumo-lista").textContent = lista.length + " paciente(s)";
+      if (!lista.length) { $("lista").innerHTML = '<li class="vazio"><span class="emoji">🗂️</span>' + (termo ? "Nada encontrado." : "Nenhum paciente cadastrado hoje.") + "</li>"; return; }
+      $("lista").innerHTML = lista.map(p => {
+        const ativo = !["finalizado", "desistiu"].includes(p.status);
+        return '<li class="item-fila" style="cursor:default" data-risco="' + (p.triagem ? p.triagem.risco : "") + '">' +
+          '<span class="senha">' + esc(p.senha) + "</span>" +
+          '<div><div class="nome">' + esc(p.nome) + '</div><div class="meta"><span>' + esc(p.cpf) + "</span><span>" + esc(p.convenio) + "</span>" + seloPref(p) + seloRisco(p.triagem && p.triagem.risco) + "</div></div>" +
+          '<div class="lado">' + seloStatus(p.status) + '<span class="espera">' + hora(p.criadoEm) + (ativo ? " · " + espera(p.criadoEm) : "") + "</span>" +
+          (ativo ? '<div class="acoes"><button class="btn btn-azul btn-p" data-chamar="' + p.id + '">' + SP.ICONES.megafone + 'Chamar</button><button class="btn btn-perigo btn-p" data-desistir="' + p.id + '">Desistiu</button></div>' : "") +
+          "</div></li>";
+      }).join("");
+    }
+
+    $("lista").addEventListener("click", e => {
+      const ch = e.target.closest("[data-chamar]"), de = e.target.closest("[data-desistir]");
+      if (ch) acao(ch, () => SP.chamarNaTv(ch.dataset.chamar, "guiche", guiche.value));
+      if (de) {
+        const p = pacientes.find(x => x.id === de.dataset.desistir);
+        if (p && confirm("Registrar que " + p.nome + " saiu sem atendimento?")) acao(de, async () => { await API.post("/pacientes/" + p.id + "/desistencia"); toast("Saída registrada.", "sucesso"); carregar(); });
+      }
+    });
+    $("busca").addEventListener("input", render);
+
+    async function carregar() {
+      try { pacientes = await API.get("/pacientes?hoje=1"); render(); }
+      catch (e) { $("resumo-lista").textContent = e.message; }
+    }
+    carregar();
+    SP.aCada(carregar, 8000);
+  </script>
 </body>
 </html>
