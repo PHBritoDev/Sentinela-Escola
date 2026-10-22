@@ -211,6 +211,54 @@
             return "verde";
         }
 
+        async function carregarPacientes() {
+            const div = document.getElementById("fila-pacientes");
+
+            try {
+                const resposta = await fetch("/pacientes");
+                if (!resposta.ok) throw new Error("HTTP " + resposta.status);
+
+                const pacientes = await resposta.json();
+                if (!Array.isArray(pacientes)) throw new Error("Lista inválida");
+
+                const fila = pacientes.filter(p => p.status === "triagem");
+                div.replaceChildren();
+
+                if (fila.length === 0) {
+                    const vazio = document.createElement("p");
+                    vazio.style.cssText = "color:#888;text-align:center;";
+                    vazio.textContent = "Nenhum paciente aguardando.";
+                    div.appendChild(vazio);
+                    return;
+                }
+
+                fila.forEach(p => {
+                    const item = document.createElement("div");
+                    item.className = "fila-item";
+
+                    const info = document.createElement("div");
+                    const nome = document.createElement("strong");
+                    nome.textContent = p.nome || "Paciente sem nome";
+                    const quebra = document.createElement("br");
+                    const detalhe = document.createElement("small");
+                    detalhe.textContent = "CPF: " + (p.cpf || "-") + " | Tipo: " + (p.tipo || "-");
+                    info.append(nome, quebra, detalhe);
+
+                    const botao = document.createElement("button");
+                    botao.type = "button";
+                    botao.className = "btn-tv";
+                    botao.textContent = "Chamar na TV";
+                    botao.addEventListener("click", () => chamarNaTv(p.nome));
+
+                    item.append(info, botao);
+                    div.appendChild(item);
+                });
+            } catch (erro) {
+                console.error("Erro ao carregar pacientes:", erro);
+                div.textContent = "Erro ao carregar pacientes. Verifique se o servidor está ativo.";
+            }
+        }
+
         function salvar() {
 
             const nome =
@@ -269,45 +317,6 @@
 
             });
 
-            fetch("/pacientes")
-                .then(r => r.json())
-                .then(pacientes => {
-
-                    const div = document.getElementById("fila-pacientes");
-
-                    const fila = pacientes.filter(p => p.status == "triagem");
-
-                    if (fila.length === 0) {
-                        div.innerHTML = '<p style="color: #888; text-align:center;">Nenhum paciente agurdando.</p>';
-                        return;
-                    }
-
-                    div.innerHTML = "";
-
-                    fila.forEach(p => {
-                        const item = document.createElement("div");
-                        item.className = "fila-item";
-                        item.innerHTML = `
-
-                            <div>
-                                <strong>${p.nome}</strong><br>
-                                <small>CPF: ${p.cpf || "-"} | Tipo: ${p.tipo || "-"}</small>
-                            </div>
-
-                            <button class="btn-tv" onclick="chamarNaTv('${p.nome}')">
-                                blue chamar Na Tv
-                            </button>
-
-                        `;
-
-                        div.appendChild(item);
-                    });
-                })
-                .catch(() => {
-                    document.getElementById("fila-pacientes").innerHTML =
-                        '<p style="color:red;">Erro ao carregar pacientes.</p>';
-                });
-
         }
 
         function chamarNaTv(nome) {
@@ -327,7 +336,7 @@
         }
 
      carregarPacientes();
-     setInterval(carregarPacientes, 100000)
+     setInterval(carregarPacientes, 10000)
 
     </script>
 
