@@ -1,375 +1,230 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Mídia Indoor - TV</title>
-
-    <style>
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: Arial, Helvetica, sans-serif;
-        }
-
-        body {
-            background: radial-gradient(rgb(152, 43, 43), rgb(42, 37, 37));
-
-            display: flex;
-            justify-content: center;
-            align-items: center;
-
-            width: 100vw;
-            height: 100vh;
-
-            overflow: hidden;
-        }
-
-        .tv-container {
-            display: flex;
-            justify-content: center;
-            align-items: stretch;
-
-            width: 96vw;
-            height: 94vh;
-
-            gap: 24px;
-        }
-
-        .left-panel {
-            display: flex;
-            flex-direction: column;
-
-            width: 35%;
-            height: 100%;
-
-            gap: 24px;
-        }
-
-        .right-panel {
-            display: flex;
-            flex-direction: column;
-
-            width: 65%;
-            height: 100%;
-
-            gap: 24px;
-        }
-
-        .box {
-            background-color: #0cdbe6;
-
-            border: 5px solid rgba(37, 35, 35, 0.35);
-            border-radius: 18px;
-
-            padding: 20px;
-
-            display: flex;
-            flex-direction: column;
-
-            justify-content: center;
-            align-items: center;
-
-            text-align: center;
-
-            box-shadow: 0px 0px 30px rgba(255, 255, 255, 0.6);
-
-            overflow: hidden;
-        }
-
-        .box-title {
-            color: #ffffff;
-
-            font-size: 2.2vw;
-
-            font-weight: bold;
-
-            text-transform: uppercase;
-
-            text-shadow:
-                1px 1px 2px rgba(245, 242, 242, 0.4);
-
-            height: auto;
-            margin-bottom: 12px;
-        }
-
-        .local-box {
-            flex: 1;
-        }
-
-        .local-number {
-            color: #d12c2c;
-
-            font-size: 9vw;
-
-            font-weight: bold;
-
-            line-height: 1;
-        }
-
-        .local-type {
-            color: #f70707;
-
-            font-size: 1.8vw;
-
-            font-weight: bold;
-
-            margin-top: 6px;
-        }
-
-        .history-box {
-            flex: 1;
-
-            justify-content: flex-start;
-
-            align-items: center;
-        }
-
-        .history-box .history-title {
-            font-size: 1.8vw;
-
-            align-self: center;
-        }
-
-        .history-list {
-            list-style: none;
-
-            width: 100%;
-
-            color: #d12c2c;
-
-            font-size: 1.5vw;
-
-            font-weight: bold;
-
-            text-align: center;
-        }
-
-        .history-list li {
-            margin-bottom: 8px;
-
-            border-bottom:
-                1px solid rgba(0, 0, 0, 0.1);
-
-            padding-bottom: 5px;
-        }
-
-        .patient-box {
-            flex: 3;
-            width: 100%;
-        }
-
-        .patient-name {
-            color: red;
-
-            font-size: 6.5vw;
-
-            font-weight: bold;
-
-            line-height: 1.2;
-
-            word-break: break-word;
-
-            animation: scalar 5s infinite;
-        }
-
-        .logo-box {
-            flex: 1;
-            width: 100%;
-
-            position: relative;
-
-            line-height: 1.2;
-            word-break: break-word;
-
-            font-size: 6.5vw;
-        }
-
-        .logo-text {
-            color: #0561a8;
-
-            font-size: 3.5vw;
-
-            font-weight: bold;
-
-            text-transform: uppercase;
-        }
-
-
-        @keyframes scalar {
-
-            0%,
-            25% {
-                transform: scale(0.7);
-            }
-
-            50% {
-                transform: scale(0.8);
-            }
-
-            75% {
-                transform: scale(0.9);
-            }
-
-            100% {
-                transform: scale(1);
-            }
-        }
-
-
-        @media (max-width: 800px) {
-
-            .tv-container {
-                width: 95vw;
-                height: 90vh;
-            }
-
-            .box {
-                padding: 10px;
-            }
-
-            .box-title {
-                font-size: 3vw;
-            }
-
-            .local-number {
-                font-size: 10vw;
-            }
-
-            .local-type {
-                font-size: 2.5vw;
-            }
-
-            .history-box .history-title {
-                font-size: 2.5vw;
-            }
-
-            .history-list {
-                font-size: 2vw;
-            }
-
-            .patient-name {
-                font-size: 7vw;
-            }
-
-            .logo-text {
-                font-size: 4vw;
-            }
-        }
-
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#06141c">
+  <title>Painel de chamadas · Saúde+</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap">
+  <style>
+    :root { --cor: #14b8a6; --fundo: #06141c; --painel: rgba(255,255,255,.05); --borda: rgba(255,255,255,.1); --suave: rgba(255,255,255,.62); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
+    html, body { height: 100%; }
+    body {
+      font-family: "Inter", system-ui, sans-serif; color: #fff; overflow: hidden;
+      background: radial-gradient(circle at 15% 0%, rgba(20,184,166,.25), transparent 45%), radial-gradient(circle at 100% 100%, rgba(37,99,235,.22), transparent 45%), var(--fundo);
+      display: grid; grid-template-rows: auto 1fr auto; height: 100vh; gap: 2vh; padding: 2.4vh 2.4vw;
+    }
+    header { display: flex; align-items: center; justify-content: space-between; }
+    .marca { display: flex; align-items: center; gap: 1vw; font-weight: 800; font-size: 2.2vw; }
+    .marca i { display: grid; place-items: center; width: 3.4vw; height: 3.4vw; border-radius: .9vw; background: linear-gradient(135deg, #2dd4bf, #0f766e); font-style: normal; font-size: 2.4vw; }
+    .marca small { display: block; font-size: .95vw; font-weight: 600; color: var(--suave); letter-spacing: .14em; text-transform: uppercase; }
+    .relogio { text-align: right; }
+    .relogio b { display: block; font-size: 3.4vw; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+    .relogio span { color: var(--suave); font-size: 1.15vw; text-transform: capitalize; }
+
+    main { display: grid; grid-template-columns: 1.75fr 1fr; gap: 2vw; min-height: 0; }
+    .atual {
+      position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; gap: 2.2vh; padding: 4vh 3.4vw;
+      border-radius: 2vw; background: linear-gradient(160deg, rgba(255,255,255,.09), rgba(255,255,255,.03)); border: 1px solid var(--borda);
+    }
+    .atual::before { content: ""; position: absolute; inset: 0 auto 0 0; width: .7vw; background: var(--cor); transition: background .4s; }
+    .rotulo { font-size: 1.3vw; font-weight: 800; letter-spacing: .24em; color: var(--suave); text-transform: uppercase; }
+    .senha { display: inline-flex; align-self: flex-start; padding: .6vh 1.4vw; border-radius: 1vw; background: #fff; color: var(--fundo); font-size: 4.2vw; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+    .nome { font-size: 5.6vw; font-weight: 900; line-height: 1.05; letter-spacing: -.02em; overflow-wrap: anywhere; }
+    .destino { display: flex; align-items: baseline; gap: 1.4vw; flex-wrap: wrap; }
+    .destino span { font-size: 2vw; color: var(--suave); font-weight: 700; }
+    .destino b { font-size: 4.4vw; font-weight: 900; color: var(--cor); letter-spacing: .02em; transition: color .4s; }
+    .aguardando .nome { color: var(--suave); font-size: 4vw; }
+
+    .lateral { display: flex; flex-direction: column; gap: 2vh; min-height: 0; }
+    .historico { flex: 1; min-height: 0; border-radius: 2vw; background: var(--painel); border: 1px solid var(--borda); padding: 3vh 2vw; overflow: hidden; }
+    .historico ul { list-style: none; display: grid; gap: 1.4vh; margin-top: 2vh; }
+    .historico li { display: grid; grid-template-columns: auto 1fr; gap: .4vh 1.2vw; align-items: center; padding: 1.4vh 1.2vw; border-radius: 1vw; background: rgba(255,255,255,.05); animation: entrar .5s ease both; }
+    .historico li b { grid-row: span 2; padding: .6vh .8vw; border-radius: .7vw; background: rgba(255,255,255,.12); font-size: 1.6vw; font-variant-numeric: tabular-nums; }
+    .historico li strong { font-size: 1.5vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .historico li span { font-size: 1.1vw; color: var(--suave); font-weight: 700; letter-spacing: .06em; }
+    .legenda { border-radius: 2vw; background: var(--painel); border: 1px solid var(--borda); padding: 2.4vh 2vw; }
+    .legenda .cores { display: grid; grid-template-columns: repeat(5, 1fr); gap: .6vw; margin-top: 1.4vh; }
+    .legenda .cores div { text-align: center; font-size: .95vw; color: var(--suave); font-weight: 600; }
+    .legenda .cores i { display: block; height: 1vh; border-radius: 99px; margin-bottom: .8vh; }
+
+    footer { display: flex; align-items: center; gap: 1.4vw; padding: 1.6vh 1.6vw; border-radius: 1.2vw; background: var(--painel); border: 1px solid var(--borda); overflow: hidden; }
+    footer .tag { flex: 0 0 auto; padding: .5vh 1vw; border-radius: .6vw; background: var(--cor); color: var(--fundo); font-weight: 800; font-size: 1.1vw; }
+    #dica { font-size: 1.45vw; font-weight: 600; white-space: nowrap; animation: entrar .6s ease both; }
+    .conexao { margin-left: auto; font-size: 1vw; color: var(--suave); white-space: nowrap; }
+    .conexao.off { color: #fca5a5; }
+
+    .flash { position: fixed; inset: 0; pointer-events: none; background: var(--cor); opacity: 0; }
+    .chamando .flash { animation: flash 2.4s ease; }
+    .chamando .atual { animation: destaque 2.4s ease; }
+    @keyframes flash { 0%, 30%, 60% { opacity: 0; } 15%, 45% { opacity: .28; } }
+    @keyframes destaque { 0% { transform: scale(.96); } 12% { transform: scale(1.02); } 100% { transform: none; } }
+    @keyframes entrar { from { opacity: 0; transform: translateY(1vh); } }
+
+    #ativar { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: rgba(6,20,28,.86); backdrop-filter: blur(6px); cursor: pointer; text-align: center; }
+    #ativar div { padding: 4vh 4vw; border-radius: 2vw; border: 1px solid var(--borda); background: rgba(255,255,255,.06); }
+    #ativar b { display: block; font-size: 2.6vw; margin-bottom: 1vh; }
+    #ativar span { font-size: 1.3vw; color: var(--suave); }
+
+    @media (max-aspect-ratio: 1/1) {
+      body { grid-template-rows: auto auto 1fr auto; }
+      main { grid-template-columns: 1fr; }
+      .marca { font-size: 5vw; } .marca i { width: 8vw; height: 8vw; font-size: 5vw; border-radius: 2vw; } .marca small { font-size: 2.4vw; }
+      .relogio b { font-size: 7vw; } .relogio span { font-size: 2.8vw; }
+      .rotulo { font-size: 3vw; } .senha { font-size: 9vw; } .nome { font-size: 10vw; } .destino span { font-size: 4vw; } .destino b { font-size: 8vw; }
+      .historico li b { font-size: 4vw; } .historico li strong { font-size: 4vw; } .historico li span { font-size: 2.8vw; }
+      .legenda { display: none; } #dica, footer .tag, .conexao { font-size: 3vw; }
+      #ativar b { font-size: 6vw; } #ativar span { font-size: 3.4vw; }
+    }
+  </style>
 </head>
-
 <body>
+  <div class="flash"></div>
+  <header>
+    <div class="marca"><i>+</i><div>Saúde+<small>Painel de chamadas</small></div></div>
+    <div class="relogio"><b id="hora">--:--</b><span id="data"></span></div>
+  </header>
 
-  <div class="tv-container">
+  <main>
+    <section class="atual aguardando" id="atual" aria-live="assertive">
+      <div class="rotulo">Chamada atual</div>
+      <div class="senha" id="senha" hidden></div>
+      <div class="nome" id="nome">Aguardando chamadas…</div>
+      <div class="destino" id="destino" hidden><span>dirija-se ao</span><b id="local"></b></div>
+    </section>
+    <aside class="lateral">
+      <section class="historico">
+        <div class="rotulo">Últimas chamadas</div>
+        <ul id="historico"></ul>
+      </section>
+      <section class="legenda">
+        <div class="rotulo" style="font-size:1vw">Atendimento por gravidade</div>
+        <div class="cores">
+          <div><i style="background:#dc2626"></i>Emergência</div><div><i style="background:#ea580c"></i>Muito urgente</div><div><i style="background:#eab308"></i>Urgente</div><div><i style="background:#16a34a"></i>Pouco urgente</div><div><i style="background:#2563eb"></i>Não urgente</div>
+        </div>
+      </section>
+    </aside>
+  </main>
 
- <div class="left-panel">
+  <footer>
+    <span class="tag">AVISO</span>
+    <span id="dica"></span>
+    <span class="conexao" id="conexao">● conectando…</span>
+  </footer>
 
-  <div class="box local-box">
- <div class="box-title" id="local-tipo">GUITCHE</div>
-  <div class="local-number" id="local-numero">---</div>
- </div>
+  <div id="ativar" role="button" tabindex="0"><div><b>🔊 Toque para ativar o som</b><span>As chamadas serão anunciadas por voz. (Tela cheia: tecla F)</span></div></div>
 
-<div class="box history-box">
- <div class="box-title">ULTIMAS CHAMADAS</div>
-  <ul id="history-list"></ul>
-         </div>
+  <script>
+    const CORES = { guiche: "#3b82f6", triagem: "#f59e0b", consultorio: "#14b8a6", medicacao: "#a855f7" };
+    const LOCAL_FALADO = { guiche: "ao guichê", triagem: "à sala de triagem", consultorio: "ao consultório", medicacao: "à sala de medicação" };
+    const PREP = { guiche: "dirija-se ao", triagem: "dirija-se à", consultorio: "dirija-se ao", medicacao: "dirija-se à" };
+    const DICAS = [
+      "Mantenha sua senha em mãos e acompanhe as chamadas por este painel.",
+      "O atendimento segue a classificação de risco: casos mais graves são atendidos primeiro.",
+      "Informe à equipe se seus sintomas piorarem enquanto aguarda.",
+      "Avise na triagem se você tem alergia a algum medicamento.",
+      "Preferencial por lei: idosos 60+, gestantes, lactantes, pessoas com deficiência e com TEA.",
+      "Lave as mãos e use máscara se estiver com tosse ou febre."
+    ];
+    const $ = id => document.getElementById(id);
+    let ultimoId = null, primeiro = true, somAtivo = false, audioCtx = null;
 
-      </div>
+    // relógio
+    function tic() {
+      const d = new Date();
+      $("hora").textContent = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      $("data").textContent = d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
+    }
+    tic(); setInterval(tic, 1000);
 
- <div class="right-panel">
+    // dicas no rodapé
+    let iDica = 0;
+    function proximaDica() { const el = $("dica"); el.style.animation = "none"; void el.offsetWidth; el.style.animation = ""; el.textContent = DICAS[iDica++ % DICAS.length]; }
+    proximaDica(); setInterval(proximaDica, 9000);
 
-     <div class="box patient-box">
-     <div class="box-title">PACIENTE</div>
-          <div class="patient-name" id="patient-name">AGUARDANDO....</div>
-    </div>
+    // som: três notas suaves + anúncio por voz
+    function ativarSom() {
+      somAtivo = true; $("ativar").hidden = true;
+      try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch { /* sem áudio */ }
+      if (window.speechSynthesis) speechSynthesis.getVoices();
+    }
+    $("ativar").addEventListener("click", ativarSom);
+    $("ativar").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") ativarSom(); });
+    document.addEventListener("keydown", e => {
+      if (e.key.toLowerCase() === "f") { if (!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); }
+    });
 
-     <div class="box logo-box">
-           <div class="logo-text">Saúde+ (Saúde Plus)🏥</div>
-     </div>
+    function campainha() {
+      if (!audioCtx) return;
+      const t0 = audioCtx.currentTime;
+      [659.25, 830.61, 987.77].forEach((f, i) => {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = "sine"; o.frequency.value = f;
+        g.gain.setValueAtTime(0, t0 + i * .32); g.gain.linearRampToValueAtTime(.35, t0 + i * .32 + .02); g.gain.exponentialRampToValueAtTime(.001, t0 + i * .32 + .9);
+        o.connect(g).connect(audioCtx.destination); o.start(t0 + i * .32); o.stop(t0 + i * .32 + 1);
+      });
+    }
 
-     </div>
+    function falar(c) {
+      if (!window.speechSynthesis) return;
+      const senha = String(c.senha || "").split("").join(" ");
+      const texto = "Senha " + senha + ". " + c.paciente + ". Dirija-se " + (LOCAL_FALADO[c.local] || "ao atendimento") + " " + Number(c.numero) + ".";
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(texto);
+      u.lang = "pt-BR"; u.rate = .92;
+      const voz = speechSynthesis.getVoices().find(v => /pt[-_]BR/i.test(v.lang));
+      if (voz) u.voice = voz;
+      setTimeout(() => speechSynthesis.speak(u), 1100);
+    }
 
-    </div>
+    function mostrar(c) {
+      const atual = $("atual");
+      document.documentElement.style.setProperty("--cor", CORES[c.local] || "#14b8a6");
+      atual.classList.remove("aguardando");
+      $("senha").hidden = false; $("senha").textContent = c.senha || "";
+      $("nome").textContent = c.paciente;
+      $("destino").hidden = false; $("destino").querySelector("span").textContent = PREP[c.local] || "dirija-se ao"; $("local").textContent = c.localNome + " " + c.numero;
+    }
 
-    <script>
+    function renderHistorico(lista, atualId) {
+      $("historico").innerHTML = "";
+      lista.filter(h => h.id !== atualId).slice(0, 5).forEach(h => {
+        const li = document.createElement("li");
+        const b = document.createElement("b"), n = document.createElement("strong"), s = document.createElement("span");
+        b.textContent = h.senha || "—"; n.textContent = h.paciente; s.textContent = h.localNome + " " + h.numero + " · " + new Date(h.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        b.style.color = CORES[h.local] || "#fff";
+        li.append(b, n, s);
+        $("historico").appendChild(li);
+      });
+    }
 
-        let ultimoId = null;
-
-      // Funçao criada para buscar a chamada
-    // atual e o historico da TV em tempo real
-        function atualizar() {
-
-       fetch("/tv/chamada")
-                .then(r => r.json())
-      .then(data => {
-
-        const chamada = data.chamada;
-                    const historico = data.historico || [];
-
-       if (chamada) {
-
-     document.getElementById("local-tipo").innerText =
-         chamada.localTipo || "GUITCHE";
-
-          document.getElementById("local-numero").innerText =
-             chamada.localNumero || "--";
-
-          document.getElementById("patient-name").innerText =
-          chamada.paciente || "AGUARDANDO...";
-
-         // Flash visual quando ha chamada nova
-         if (chamada.id !== ultimoId) {
-
-       ultimoId = chamada.id;
-
-   const patientBox =
-      document.querySelector(".patient-box");
-
-      patientBox.classList.remove("flash");
-
-      void patientBox.offsetWidth;
-
-  patientBox.classList.add("flash");
-  }
-     }
-
- const list =
-       document.getElementById("history-list");
-
-  list.innerHTML = "";
-
-       historico.slice(0, 4).forEach(h => {
-
-     const li = document.createElement("li");
-
-      const tipo = h.localTipo
-            ? h.localTipo.substring(0, 4)
-          : "GUITCHE";
-
-    li.innerText =
-    `${tipo}. ${h.localNumero} - ${h.paciente}`;
-
-     list.appendChild(li);
- });
-
-  })
-.catch(err =>
-  console.log("Erro ao buscar chamada:", err)
- );
-     }
-
- // Polling a cada 2 segundos
-     atualizar();
-        setInterval(atualizar, 2000);
-
-    </script>
-
+    async function atualizar() {
+      try {
+        const r = await fetch("/api/tv/chamada", { cache: "no-store" });
+        if (!r.ok) throw new Error();
+        const { atual, historico } = await r.json();
+        $("conexao").textContent = "● ao vivo"; $("conexao").className = "conexao";
+        if (atual) {
+          mostrar(atual);
+          if (atual.id !== ultimoId) {
+            ultimoId = atual.id;
+            if (!primeiro) {
+              document.body.classList.remove("chamando"); void document.body.offsetWidth; document.body.classList.add("chamando");
+              if (somAtivo) { campainha(); falar(atual); }
+            }
+          }
+        }
+        renderHistorico(historico || [], atual && atual.id);
+        primeiro = false;
+      } catch {
+        $("conexao").textContent = "● sem conexão — tentando novamente"; $("conexao").className = "conexao off";
+      }
+    }
+    atualizar();
+    setInterval(atualizar, 2000);
+  </script>
 </body>
-
 </html>
