@@ -19,17 +19,40 @@
 </div>
 
 <script>
-function cadastrar(){
- fetch("/atendimento",{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body: JSON.stringify({
-    nome: nome.value,
-    cpf: cpf.value,
-    tipo: tipo.value
-  })
- });
- alert("Paciente enviado para triagem");
+async function cadastrar() {
+  const nome = document.getElementById("nome").value.trim();
+  const cpf = document.getElementById("cpf").value.trim();
+  const tipo = document.getElementById("tipo").value;
+  const botao = document.querySelector('button[onclick="cadastrar()"]');
+
+  if (!nome || !cpf) {
+    alert("Informe o nome e o CPF do paciente.");
+    return;
+  }
+
+  if (botao) botao.disabled = true;
+
+  try {
+    const resposta = await fetch("/atendimento", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nome, cpf, tipo })
+    });
+    const dados = await resposta.json().catch(() => ({}));
+
+    if (!resposta.ok) {
+      throw new Error(dados.erro || "O servidor recusou o cadastro.");
+    }
+
+    alert("Paciente enviado para triagem.");
+    document.getElementById("nome").value = "";
+    document.getElementById("cpf").value = "";
+  } catch (erro) {
+    console.error("Erro ao cadastrar paciente:", erro);
+    alert("Não foi possível cadastrar o paciente. Confira se o servidor está ativo.");
+  } finally {
+    if (botao) botao.disabled = false;
+  }
 }
 </script>
 </body>
