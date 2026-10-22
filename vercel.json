@@ -2,6 +2,14 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/tv/chamar",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/tv/chamada",
+      "destination": "/api/index.js"
+    },
+    {
       "source": "/health",
       "destination": "/api/index.js"
     },
