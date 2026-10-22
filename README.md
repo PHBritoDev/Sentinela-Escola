@@ -33,7 +33,7 @@ No computador os dados ficam em `backend/data/db.local.json` (criado sozinho). `
 
 Na Vercel o disco das funções **não guarda arquivos** e cada acesso pode cair num servidor diferente — por isso, antes, o paciente "sumia" e a TV não recebia a chamada. Agora o sistema usa um banco Redis:
 
-1. No projeto da Vercel, abra **Storage → Create Database → Upstash (Redis)** e conecte ao projeto.
+1. No projeto da Vercel, abra **Storage → Create Database → Upstash (Redis)** e conecte ao projeto. As gravações usam um lock compartilhado no Redis para serializar alterações entre instâncias serverless.
 2. A Vercel cria sozinha as variáveis `KV_REST_API_URL` e `KV_REST_API_TOKEN` (também aceitamos `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`).
 3. Em **Settings → Environment Variables**, configure `SENTINELA_ADMIN_USER` (3–40 caracteres) e `SENTINELA_ADMIN_PASSWORD` (mínimo de 16 caracteres) para Production. Use uma senha única e guarde-a fora do repositório.
 4. Faça um novo deploy. Na Vercel, a API retorna erro de prontidão (`GET /api/health`, HTTP 503) até o Redis estar conectado e as credenciais iniciais do administrador serem configuradas.

@@ -16,6 +16,9 @@ const crypto = require("crypto");
 
 const SEED_FILE = path.join(__dirname, "db.json");
 const KEY = process.env.SENTINELA_DB_KEY || "sentinela:db";
+const LOCK_KEY = `${KEY}:lock`;
+const LOCK_TTL_MS = 60_000;
+const LOCK_WAIT_MS = 10_000;
 
 function redisConfig() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -122,7 +125,8 @@ async function redis(cmd) {
   const r = await fetch(cfg.url, {
     method: "POST",
     headers: { Authorization: "Bearer " + cfg.token, "Content-Type": "application/json" },
-    body: JSON.stringify(cmd)
+    body: JSON.stringify(cmd),
+    signal: AbortSignal.timeout(10_000)
   });
   if (!r.ok) throw new Error("Banco Redis respondeu " + r.status);
   const j = await r.json();
@@ -134,6 +138,30 @@ function lerSemente() {
   try { return JSON.parse(fs.readFileSync(SEED_FILE, "utf8")); } catch { return null; }
 }
 
+async function adquirirLockRedis() {
+  const token = crypto.randomBytes(24).toString("hex");
+  const limite = Date.now() + LOCK_WAIT_MS;
+  while (Date.now() < limite) {
+    const resultado = await redis(["SET", LOCK_KEY, token, "NX", "PX", LOCK_TTL_MS]);
+    if (resultado === "OK") return token;
+    await new Promise(resolve => setTimeout(resolve, 75));
+  }
+  throw new Error("Banco ocupado; a gravação não foi feita. Tente novamente.");
+}
+
+async function liberarLockRedis(token) {
+  const script = "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end";
+  try { await redis(["EVAL", script, 1, LOCK_KEY, token]); } catch { /* a expiração automática libera o lock */ }
+}
+
+async function lerRedisComLock() {
+  const bruto = await redis(["GET", KEY]);
+  if (bruto) return normalizar(JSON.parse(bruto));
+  const inicial = process.env.VERCEL ? bancoVazio() : normalizar(lerSemente());
+  await redis(["SET", KEY, JSON.stringify(inicial)]);
+  return inicial;
+}
+
 async function ler() {
   const armazenamento = modo();
   if (process.env.VERCEL && armazenamento !== "redis") {
@@ -142,9 +170,9 @@ async function ler() {
   if (armazenamento === "redis") {
     const bruto = await redis(["GET", KEY]);
     if (bruto) return normalizar(JSON.parse(bruto));
-    const inicial = process.env.VERCEL ? bancoVazio() : normalizar(lerSemente());
-    await redis(["SET", KEY, JSON.stringify(inicial)]);
-    return inicial;
+    const token = await adquirirLockRedis();
+    try { return await lerRedisComLock(); }
+    finally { await liberarLockRedis(token); }
   }
   const arq = arquivoAtual();
   if (fs.existsSync(arq)) {
@@ -163,10 +191,21 @@ async function gravar(db) {
   fs.renameSync(tmp, arq);
 }
 
-// Fila simples: uma alteração por vez dentro da mesma instância (evita perder gravações simultâneas).
+// Fila local mais lock no Redis: evita sobrescritas entre processos diferentes da Vercel.
 let fila = Promise.resolve();
 function alterar(fn) {
   const tarefa = fila.then(async () => {
+    if (modo() === "redis") {
+      const token = await adquirirLockRedis();
+      try {
+        const db = await lerRedisComLock();
+        const resultado = await fn(db);
+        await gravar(db);
+        return resultado;
+      } finally {
+        await liberarLockRedis(token);
+      }
+    }
     const db = await ler();
     const resultado = await fn(db);
     await gravar(db);
