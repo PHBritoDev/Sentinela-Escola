@@ -10,6 +10,11 @@ app.use(cors());
 
 app.use(express.static(path.join(__dirname, "../frontend")));
 
+// A página administrativa fica na raiz do repositório.
+app.get("/admin.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "../admin.html"));
+});
+
 const DB_FILE = path.join(__dirname, "../backend/db.json");
 
 function readDB() {
@@ -87,7 +92,7 @@ app.post("/login", (req, res) => {
     });
   }
 
-  res.json(user);
+  res.json({ usuario: user.usuario, tipo: user.tipo });
 });
 
 // ATENDIMENTO
@@ -141,6 +146,17 @@ app.post("/triagem", (req, res) => {
   res.json(triagem);
 });
 
+// LISTAR PACIENTES NA FILA DE TRIAGEM
+app.get("/pacientes", (req, res) => {
+  try {
+    const db = readDB();
+    res.json(Array.isArray(db.pacientes) ? db.pacientes : []);
+  } catch (error) {
+    console.error("Erro ao listar pacientes:", error);
+    res.status(500).json({ erro: "Não foi possível listar os pacientes." });
+  }
+});
+
 // LISTAR TRIAGENS
 app.get("/triagens", (req, res) => {
   const db = readDB();
@@ -186,6 +202,11 @@ app.post("/consulta", (req, res) => {
 app.get("/medicacoes", (req, res) => {
   const db = readDB();
   res.json(db.consultas);
+});
+
+// Verificação simples para confirmar que a API está ativa.
+app.get("/health", (req, res) => {
+  res.json({ ok: true, servico: "Sentinela-Escola" });
 });
 
 // START
