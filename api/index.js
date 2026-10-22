@@ -10,7 +10,7 @@ app.use(cors());
 
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-const DB_FILE = path.join(__dirname, "db.json");
+const DB_FILE = path.join(__dirname, "../backend/db.json");
 
 function readDB() {
   if (!fs.existsSync(DB_FILE)) {
@@ -28,6 +28,49 @@ function readDB() {
 function writeDB(data) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
+
+// USUÁRIOS: listar sem expor senhas
+app.get("/usuarios", (req, res) => {
+  try {
+    const db = readDB();
+    res.json((db.usuarios || []).map(({ usuario, tipo }) => ({ usuario, tipo })));
+  } catch (error) {
+    console.error("Erro ao listar usuários:", error);
+    res.status(500).json({ erro: "Não foi possível listar os usuários." });
+  }
+});
+
+// USUÁRIOS: cadastrar
+app.post("/usuarios", (req, res) => {
+  try {
+    const usuario = String(req.body?.usuario || "").trim();
+    const senha = String(req.body?.senha || "");
+    const tipo = String(req.body?.tipo || "").trim().toLowerCase();
+    const tiposPermitidos = ["atendimento", "triagem", "medico"];
+
+    if (!usuario || !senha || !tiposPermitidos.includes(tipo)) {
+      return res.status(400).json({
+        erro: "Informe usuário, senha e um tipo válido (atendimento, triagem ou medico)."
+      });
+    }
+
+    const db = readDB();
+    db.usuarios = Array.isArray(db.usuarios) ? db.usuarios : [];
+
+    if (db.usuarios.some(u => String(u.usuario).toLowerCase() === usuario.toLowerCase())) {
+      return res.status(409).json({ erro: "Esse usuário já está cadastrado." });
+    }
+
+    const novoUsuario = { usuario, senha, tipo };
+    db.usuarios.push(novoUsuario);
+    writeDB(db);
+
+    return res.status(201).json({ usuario: novoUsuario.usuario, tipo: novoUsuario.tipo });
+  } catch (error) {
+    console.error("Erro ao cadastrar usuário:", error);
+    return res.status(500).json({ erro: "Não foi possível salvar o usuário." });
+  }
+});
 
 // LOGIN
 app.post("/login", (req, res) => {
