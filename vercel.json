@@ -2,6 +2,22 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/health",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/pacientes",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/usuarios",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/admin.html",
+      "destination": "/api/index.js"
+    },
+    {
       "source": "/login",
       "destination": "/api/index.js"
     },
