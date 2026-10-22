@@ -157,6 +157,53 @@ app.get("/pacientes", (req, res) => {
   }
 });
 
+// TV: consultar chamada atual e histórico
+app.get("/tv/chamada", (req, res) => {
+  try {
+    const db = readDB();
+    res.json({
+      chamada: db.tvChamadaAtual || null,
+      historico: Array.isArray(db.tvChamadas) ? db.tvChamadas : []
+    });
+  } catch (error) {
+    console.error("Erro ao consultar chamada da TV:", error);
+    res.status(500).json({ erro: "Não foi possível carregar as chamadas da TV." });
+  }
+});
+
+// TV: chamar paciente para um guichê/consultório
+app.post("/tv/chamar", (req, res) => {
+  try {
+    const paciente = String(req.body?.paciente || "").trim();
+    const localTipo = String(req.body?.localTipo || "GUICHE").trim();
+    const localNumero = String(req.body?.localNumero || "01").trim();
+
+    if (!paciente) {
+      return res.status(400).json({ erro: "Informe o nome do paciente." });
+    }
+
+    const db = readDB();
+    db.tvChamadas = Array.isArray(db.tvChamadas) ? db.tvChamadas : [];
+    const chamada = {
+      id: Date.now(),
+      paciente,
+      localTipo: localTipo || "GUICHE",
+      localNumero: localNumero || "01",
+      createdAt: new Date().toISOString()
+    };
+
+    db.tvChamadaAtual = chamada;
+    db.tvChamadas.unshift(chamada);
+    db.tvChamadas = db.tvChamadas.slice(0, 10);
+    writeDB(db);
+
+    return res.status(201).json({ ok: true, chamada });
+  } catch (error) {
+    console.error("Erro ao chamar paciente na TV:", error);
+    res.status(500).json({ erro: "Não foi possível registrar a chamada." });
+  }
+});
+
 // LISTAR TRIAGENS
 app.get("/triagens", (req, res) => {
   const db = readDB();
