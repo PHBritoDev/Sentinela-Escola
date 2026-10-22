@@ -20,7 +20,7 @@
 
 <script>
 function cadastrar(){
- fetch("http://localhost:3000/atendimento",{
+ fetch("/atendimento",{
   method:"POST",
   headers:{"Content-Type":"application/json"},
   body: JSON.stringify({
