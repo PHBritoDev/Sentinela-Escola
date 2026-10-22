@@ -8,7 +8,7 @@
  *     UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN). Persistente e compartilhado — use este no deploy.
  *   - "arquivo": backend/data/db.local.json, quando roda no computador (npm start). backend/db.json é só a
  *     semente inicial (usuários de demonstração) e não é alterado pelo sistema.
- *   - "temporario": /tmp na Vercel sem banco configurado. Funciona, mas pode ser apagado a qualquer momento.
+ *   - Na Vercel, Redis é obrigatório. Sem o banco, a API falha fechada em vez de gravar dados temporários.
  */
 const fs = require("fs");
 const path = require("path");
@@ -60,10 +60,30 @@ const USUARIOS_PADRAO = [
   { usuario: "enfermagem", senha: "123", tipo: "enfermagem", nome: "Sala de Medicação" }
 ];
 
+function adminInicial() {
+  if (!process.env.VERCEL) {
+    const admin = USUARIOS_PADRAO.find(u => u.tipo === "admin");
+    return { ...admin, senha: hashSenha(admin.senha), criadoEm: new Date().toISOString() };
+  }
+
+  const usuario = String(process.env.SENTINELA_ADMIN_USER || "").trim().toLowerCase();
+  const senha = String(process.env.SENTINELA_ADMIN_PASSWORD || "");
+  if (!/^[a-z0-9._-]{3,40}$/.test(usuario)) {
+    throw new Error("Configure SENTINELA_ADMIN_USER (3 a 40 caracteres) antes da inicialização.");
+  }
+  if (senha.length < 16) {
+    throw new Error("Configure SENTINELA_ADMIN_PASSWORD com pelo menos 16 caracteres antes da inicialização.");
+  }
+  return { usuario, senha: hashSenha(senha), tipo: "admin", nome: "Administração", criadoEm: new Date().toISOString() };
+}
+
 function bancoVazio() {
+  const usuarios = process.env.VERCEL
+    ? [adminInicial()]
+    : USUARIOS_PADRAO.map(u => ({ ...u, senha: hashSenha(u.senha), criadoEm: new Date().toISOString() }));
   return {
     versao: 2,
-    usuarios: USUARIOS_PADRAO.map(u => ({ ...u, senha: hashSenha(u.senha), criadoEm: new Date().toISOString() })),
+    usuarios,
     sessoes: [],
     pacientes: [],
     tv: { atual: null, historico: [] },
@@ -76,7 +96,9 @@ function normalizar(db) {
   if (!db || typeof db !== "object") return bancoVazio();
   if (db.versao !== 2) {
     const novo = bancoVazio();
-    const antigos = Array.isArray(db.usuarios) ? db.usuarios : [];
+    const nomesDemo = new Set(USUARIOS_PADRAO.map(u => u.usuario));
+    const antigos = (Array.isArray(db.usuarios) ? db.usuarios : [])
+      .filter(u => !process.env.VERCEL || !nomesDemo.has(String(u?.usuario || "").toLowerCase()));
     for (const u of antigos) {
       if (!u || !u.usuario || novo.usuarios.some(x => x.usuario === u.usuario)) continue;
       const tipo = ["admin", "atendimento", "triagem", "medico", "enfermagem"].includes(u.tipo) ? u.tipo : "atendimento";
@@ -90,7 +112,7 @@ function normalizar(db) {
   db.tv = db.tv && typeof db.tv === "object" ? db.tv : { atual: null, historico: [] };
   db.tv.historico = Array.isArray(db.tv.historico) ? db.tv.historico : [];
   db.contadores = db.contadores || { normal: 0, preferencial: 0, dia: null };
-  if (!db.usuarios.some(u => u.tipo === "admin")) db.usuarios.unshift({ usuario: "admin", senha: hashSenha("admin123"), tipo: "admin", nome: "Administração", criadoEm: new Date().toISOString() });
+  if (!db.usuarios.some(u => u.tipo === "admin")) db.usuarios.unshift(adminInicial());
   return db;
 }
 
@@ -113,10 +135,14 @@ function lerSemente() {
 }
 
 async function ler() {
-  if (modo() === "redis") {
+  const armazenamento = modo();
+  if (process.env.VERCEL && armazenamento !== "redis") {
+    throw new Error("Redis persistente obrigatório na Vercel. Conecte o banco antes de usar a API.");
+  }
+  if (armazenamento === "redis") {
     const bruto = await redis(["GET", KEY]);
     if (bruto) return normalizar(JSON.parse(bruto));
-    const inicial = normalizar(lerSemente());
+    const inicial = process.env.VERCEL ? bancoVazio() : normalizar(lerSemente());
     await redis(["SET", KEY, JSON.stringify(inicial)]);
     return inicial;
   }

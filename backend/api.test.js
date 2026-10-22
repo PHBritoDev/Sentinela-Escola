@@ -66,11 +66,12 @@ test("fluxo completo: recepção → triagem → médico → medicação → alt
 test("admin gerencia usuários; outros perfis não", async () => {
   const adm = await login("admin", "admin123"), rec = await login("atendimento");
   assert.equal((await api("GET", "/api/usuarios", null, rec)).status, 403);
-  assert.equal((await api("POST", "/api/usuarios", { usuario: "joana", nome: "Dra. Joana", senha: "abc123", tipo: "medico" }, adm)).status, 201);
+  assert.equal((await api("POST", "/api/usuarios", { usuario: "joana", nome: "Dra. Joana", senha: "abc123", tipo: "medico" }, adm)).status, 400, "senhas curtas são rejeitadas");
+  assert.equal((await api("POST", "/api/usuarios", { usuario: "joana", nome: "Dra. Joana", senha: "SenhaSegura123!", tipo: "medico" }, adm)).status, 201);
   const usuarios = (await api("GET", "/api/usuarios", null, adm)).dados;
   assert.ok(usuarios.some(u => u.usuario === "joana"));
   assert.ok(usuarios.every(u => !("senha" in u)), "senhas nunca saem da API");
-  assert.ok(await login("joana", "abc123"));
+  assert.ok(await login("joana", "SenhaSegura123!"));
   assert.equal((await api("DELETE", "/api/usuarios/admin", null, adm)).status, 400);
   assert.equal((await api("DELETE", "/api/usuarios/joana", null, adm)).status, 200);
 });
