@@ -259,64 +259,45 @@
             }
         }
 
-        function salvar() {
+        async function salvar() {
+            const nome = document.getElementById("nome").value.trim();
+            const sintoma = document.getElementById("sintoma").value;
+            const temperaturaTexto = document.getElementById("temp").value;
+            const temperatura = Number(temperaturaTexto);
+            const alergia = document.getElementById("alergia").value.trim();
+            const observacao = document.getElementById("observacao").value.trim();
+            const resultado = document.getElementById("resultado");
+            const botao = document.querySelector('button[onclick="salvar()"]');
 
-            const nome =
-                document.getElementById("nome").value;
+            if (!nome || !sintoma || !temperaturaTexto || !Number.isFinite(temperatura) || temperatura < 30 || temperatura > 45) {
+                alert("Informe o nome, selecione o sintoma e digite uma temperatura válida.");
+                return;
+            }
 
-            const sintoma =
-                document.getElementById("sintoma").value;
+            const risco = classificarRisco(sintoma, temperatura);
+            if (botao) botao.disabled = true;
 
-            const temperatura =
-                Number(document.getElementById("temp").value);
+            try {
+                const resposta = await fetch("/triagem", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ nome, sintoma, temperatura, alergia, observacao, risco })
+                });
+                const dados = await resposta.json().catch(() => ({}));
 
-            const alergia =
-                document.getElementById("alergia").value;
-
-            const observacao =
-                document.getElementById("observacao").value;
-
-            const risco =
-                classificarRisco(sintoma, temperatura);
-
-            fetch("/triagem", {
-
-                method: "POST",
-
-                headers: {
-                    "Content-Type": "application/json"
-                },
-
-                body: JSON.stringify({
-
-                    nome,
-                    sintoma,
-                    temperatura,
-                    alergia,
-                    observacao,
-                    risco
-
-                })
-
-            })
-
-            .then(r => r.json())
-
-            .then(data => {
-
-                const resultado =
-                    document.getElementById("resultado");
+                if (!resposta.ok) {
+                    throw new Error(dados.erro || "O servidor recusou a triagem.");
+                }
 
                 resultado.className = risco;
-
-                resultado.innerHTML =
-                    "Classificação: " +
-                    risco.toUpperCase();
-
-                alert("Triagem salva");
-
-            });
-
+                resultado.textContent = "Classificação: " + risco.toUpperCase();
+                alert("Triagem salva.");
+            } catch (erro) {
+                console.error("Erro ao salvar triagem:", erro);
+                alert("Não foi possível salvar a triagem. Confira se o servidor está ativo.");
+            } finally {
+                if (botao) botao.disabled = false;
+            }
         }
 
         function chamarNaTv(nome) {
