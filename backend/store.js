@@ -180,7 +180,7 @@ async function lerRedisComLock() {
 async function ler() {
   const armazenamento = modo();
   if (emProducao() && armazenamento !== "redis") {
-    throw new Error("Redis persistente obrigatório na Vercel. Conecte o banco antes de usar a API.");
+    throw new Error("Redis persistente obrigatório em produção. Configure o banco antes de usar a API.");
   }
   if (armazenamento === "redis") {
     const bruto = await redis(["GET", KEY]);
