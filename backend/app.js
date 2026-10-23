@@ -127,7 +127,7 @@ app.post("/api/usuarios", exigir("admin"), rota(async (req, res) => {
   const senha = String(req.body?.senha || "");
   const tipo = texto(req.body?.tipo, 20).toLowerCase();
   if (!/^[a-z0-9._-]{3,40}$/.test(usuario)) return erro(res, 400, "Usuário deve ter 3 a 40 caracteres (letras, números, ponto, hífen).");
-  if (senha.length < 3) return erro(res, 400, "A senha precisa de pelo menos 3 caracteres.");
+  if (senha.length < 12) return erro(res, 400, "A senha precisa de pelo menos 12 caracteres.");
   if (!TIPOS.includes(tipo)) return erro(res, 400, "Perfil inválido.");
   const novo = await store.alterar(db => {
     if (db.usuarios.some(u => u.usuario.toLowerCase() === usuario)) throw falha(409, "Esse usuário já existe.");
@@ -351,9 +351,11 @@ app.post("/api/admin/limpar", exigir("admin"), rota(async (req, res) => {
 
 app.get("/api/health", rota(async (req, res) => {
   const m = store.modo();
+  const persistente = !process.env.VERCEL || m === "redis";
   let ok = true;
   try { await store.ler(); } catch (e) { ok = false; }
-  res.json({ ok, servico: "Saúde+ Sentinela", armazenamento: m, persistente: m !== "temporario" });
+  ok = ok && persistente;
+  res.status(ok ? 200 : 503).json({ ok, servico: "Saúde+ Sentinela", armazenamento: m, persistente });
 }));
 
 app.use("/api", (req, res) => erro(res, 404, "Rota da API não encontrada."));

@@ -8,7 +8,7 @@
  *     UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN). Persistente e compartilhado — use este no deploy.
  *   - "arquivo": backend/data/db.local.json, quando roda no computador (npm start). backend/db.json é só a
  *     semente inicial (usuários de demonstração) e não é alterado pelo sistema.
- *   - "temporario": /tmp na Vercel sem banco configurado. Funciona, mas pode ser apagado a qualquer momento.
+ *   - Na Vercel, Redis é obrigatório. Sem o banco, a API falha fechada em vez de gravar dados temporários.
  */
 const fs = require("fs");
 const path = require("path");
@@ -16,6 +16,9 @@ const crypto = require("crypto");
 
 const SEED_FILE = path.join(__dirname, "db.json");
 const KEY = process.env.SENTINELA_DB_KEY || "sentinela:db";
+const LOCK_KEY = `${KEY}:lock`;
+const LOCK_TTL_MS = 60_000;
+const LOCK_WAIT_MS = 10_000;
 
 function redisConfig() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -60,10 +63,30 @@ const USUARIOS_PADRAO = [
   { usuario: "enfermagem", senha: "123", tipo: "enfermagem", nome: "Sala de Medicação" }
 ];
 
+function adminInicial() {
+  if (!process.env.VERCEL) {
+    const admin = USUARIOS_PADRAO.find(u => u.tipo === "admin");
+    return { ...admin, senha: hashSenha(admin.senha), criadoEm: new Date().toISOString() };
+  }
+
+  const usuario = String(process.env.SENTINELA_ADMIN_USER || "").trim().toLowerCase();
+  const senha = String(process.env.SENTINELA_ADMIN_PASSWORD || "");
+  if (!/^[a-z0-9._-]{3,40}$/.test(usuario)) {
+    throw new Error("Configure SENTINELA_ADMIN_USER (3 a 40 caracteres) antes da inicialização.");
+  }
+  if (senha.length < 16) {
+    throw new Error("Configure SENTINELA_ADMIN_PASSWORD com pelo menos 16 caracteres antes da inicialização.");
+  }
+  return { usuario, senha: hashSenha(senha), tipo: "admin", nome: "Administração", criadoEm: new Date().toISOString() };
+}
+
 function bancoVazio() {
+  const usuarios = process.env.VERCEL
+    ? [adminInicial()]
+    : USUARIOS_PADRAO.map(u => ({ ...u, senha: hashSenha(u.senha), criadoEm: new Date().toISOString() }));
   return {
     versao: 2,
-    usuarios: USUARIOS_PADRAO.map(u => ({ ...u, senha: hashSenha(u.senha), criadoEm: new Date().toISOString() })),
+    usuarios,
     sessoes: [],
     pacientes: [],
     tv: { atual: null, historico: [] },
@@ -76,7 +99,9 @@ function normalizar(db) {
   if (!db || typeof db !== "object") return bancoVazio();
   if (db.versao !== 2) {
     const novo = bancoVazio();
-    const antigos = Array.isArray(db.usuarios) ? db.usuarios : [];
+    const nomesDemo = new Set(USUARIOS_PADRAO.map(u => u.usuario));
+    const antigos = (Array.isArray(db.usuarios) ? db.usuarios : [])
+      .filter(u => !process.env.VERCEL || !nomesDemo.has(String(u?.usuario || "").toLowerCase()));
     for (const u of antigos) {
       if (!u || !u.usuario || novo.usuarios.some(x => x.usuario === u.usuario)) continue;
       const tipo = ["admin", "atendimento", "triagem", "medico", "enfermagem"].includes(u.tipo) ? u.tipo : "atendimento";
@@ -90,7 +115,7 @@ function normalizar(db) {
   db.tv = db.tv && typeof db.tv === "object" ? db.tv : { atual: null, historico: [] };
   db.tv.historico = Array.isArray(db.tv.historico) ? db.tv.historico : [];
   db.contadores = db.contadores || { normal: 0, preferencial: 0, dia: null };
-  if (!db.usuarios.some(u => u.tipo === "admin")) db.usuarios.unshift({ usuario: "admin", senha: hashSenha("admin123"), tipo: "admin", nome: "Administração", criadoEm: new Date().toISOString() });
+  if (!db.usuarios.some(u => u.tipo === "admin")) db.usuarios.unshift(adminInicial());
   return db;
 }
 
@@ -100,7 +125,8 @@ async function redis(cmd) {
   const r = await fetch(cfg.url, {
     method: "POST",
     headers: { Authorization: "Bearer " + cfg.token, "Content-Type": "application/json" },
-    body: JSON.stringify(cmd)
+    body: JSON.stringify(cmd),
+    signal: AbortSignal.timeout(10_000)
   });
   if (!r.ok) throw new Error("Banco Redis respondeu " + r.status);
   const j = await r.json();
@@ -112,13 +138,41 @@ function lerSemente() {
   try { return JSON.parse(fs.readFileSync(SEED_FILE, "utf8")); } catch { return null; }
 }
 
+async function adquirirLockRedis() {
+  const token = crypto.randomBytes(24).toString("hex");
+  const limite = Date.now() + LOCK_WAIT_MS;
+  while (Date.now() < limite) {
+    const resultado = await redis(["SET", LOCK_KEY, token, "NX", "PX", LOCK_TTL_MS]);
+    if (resultado === "OK") return token;
+    await new Promise(resolve => setTimeout(resolve, 75));
+  }
+  throw new Error("Banco ocupado; a gravação não foi feita. Tente novamente.");
+}
+
+async function liberarLockRedis(token) {
+  const script = "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end";
+  try { await redis(["EVAL", script, 1, LOCK_KEY, token]); } catch { /* a expiração automática libera o lock */ }
+}
+
+async function lerRedisComLock() {
+  const bruto = await redis(["GET", KEY]);
+  if (bruto) return normalizar(JSON.parse(bruto));
+  const inicial = process.env.VERCEL ? bancoVazio() : normalizar(lerSemente());
+  await redis(["SET", KEY, JSON.stringify(inicial)]);
+  return inicial;
+}
+
 async function ler() {
-  if (modo() === "redis") {
+  const armazenamento = modo();
+  if (process.env.VERCEL && armazenamento !== "redis") {
+    throw new Error("Redis persistente obrigatório na Vercel. Conecte o banco antes de usar a API.");
+  }
+  if (armazenamento === "redis") {
     const bruto = await redis(["GET", KEY]);
     if (bruto) return normalizar(JSON.parse(bruto));
-    const inicial = normalizar(lerSemente());
-    await redis(["SET", KEY, JSON.stringify(inicial)]);
-    return inicial;
+    const token = await adquirirLockRedis();
+    try { return await lerRedisComLock(); }
+    finally { await liberarLockRedis(token); }
   }
   const arq = arquivoAtual();
   if (fs.existsSync(arq)) {
@@ -137,10 +191,21 @@ async function gravar(db) {
   fs.renameSync(tmp, arq);
 }
 
-// Fila simples: uma alteração por vez dentro da mesma instância (evita perder gravações simultâneas).
+// Fila local mais lock no Redis: evita sobrescritas entre processos diferentes da Vercel.
 let fila = Promise.resolve();
 function alterar(fn) {
   const tarefa = fila.then(async () => {
+    if (modo() === "redis") {
+      const token = await adquirirLockRedis();
+      try {
+        const db = await lerRedisComLock();
+        const resultado = await fn(db);
+        await gravar(db);
+        return resultado;
+      } finally {
+        await liberarLockRedis(token);
+      }
+    }
     const db = await ler();
     const resultado = await fn(db);
     await gravar(db);
