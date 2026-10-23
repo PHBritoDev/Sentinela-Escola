@@ -29,7 +29,7 @@
     <section class="login-form">
       <form class="caixa" id="form" novalidate>
         <h2>Entrar</h2>
-        <p class="sub">Use o usuário do seu setor.</p>
+        <p class="sub">Entre com as credenciais fornecidas pelo administrador.</p>
         <div class="campos">
           <div class="campo">
             <label for="usuario">Usuário</label>
@@ -46,16 +46,6 @@
         </div>
         <div class="erro-form" id="erro" role="alert"></div>
 
-        <div class="demo">
-          <b>Acesso de demonstração</b> — toque para preencher:
-          <div class="demo-lista">
-            <button type="button" data-u="atendimento" data-s="123">Recepção</button>
-            <button type="button" data-u="triagem" data-s="123">Triagem</button>
-            <button type="button" data-u="medico" data-s="123">Médico</button>
-            <button type="button" data-u="enfermagem" data-s="123">Medicação</button>
-            <button type="button" data-u="admin" data-s="admin123">Administração</button>
-          </div>
-        </div>
       </form>
     </section>
   </main>
@@ -74,12 +64,6 @@
       i.type = i.type === "password" ? "text" : "password";
       e.target.textContent = i.type === "password" ? "ver" : "ocultar";
     };
-    document.querySelectorAll(".demo-lista button").forEach(b => b.onclick = () => {
-      document.getElementById("usuario").value = b.dataset.u;
-      document.getElementById("senha").value = b.dataset.s;
-      document.getElementById("entrar").focus();
-    });
-
     document.getElementById("form").addEventListener("submit", async e => {
       e.preventDefault();
       mostrarErro("");
