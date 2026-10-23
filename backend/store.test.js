@@ -8,6 +8,7 @@ const store = require("./store");
 test("Vercel requires Redis and bootstraps only an explicitly configured administrator", async () => {
   const keys = [
     "VERCEL",
+    "NODE_ENV",
     "DB_FILE",
     "KV_REST_API_URL",
     "KV_REST_API_TOKEN",
@@ -42,6 +43,26 @@ test("Vercel requires Redis and bootstraps only an explicitly configured adminis
       ]
     });
     assert.deepEqual(legado.usuarios.map(u => u.usuario), ["operador", "profissional"]);
+
+    // Render production must also fail closed without persistent Redis and remove demo users.
+    delete process.env.VERCEL;
+    process.env.NODE_ENV = "production";
+    await assert.rejects(store.ler(), /Redis persistente obrigatório/);
+    const hosted = store.normalizar({
+      versao: 2,
+      usuarios: [
+        { usuario: "admin", senha: "admin123", tipo: "admin" },
+        { usuario: "atendimento", senha: "123", tipo: "atendimento" },
+        { usuario: "profissional", senha: "outra", tipo: "medico" }
+      ],
+      sessoes: [],
+      pacientes: [{ id: "preserve-patient" }],
+      tv: { atual: null, historico: [] },
+      contadores: { normal: 0, preferencial: 0, dia: null }
+    });
+    assert.deepEqual(hosted.usuarios.map(u => u.usuario), ["operador", "profissional"]);
+    assert.equal(hosted.versao, 3);
+    assert.equal(hosted.pacientes[0].id, "preserve-patient");
   } finally {
     for (const key of keys) {
       if (previous[key] === undefined) delete process.env[key];
