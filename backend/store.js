@@ -20,6 +20,11 @@ const LOCK_KEY = `${KEY}:lock`;
 const LOCK_TTL_MS = 60_000;
 const LOCK_WAIT_MS = 10_000;
 
+// Treat hosted production services as production even when the provider does not set VERCEL.
+function emProducao() {
+  return process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+}
+
 function redisConfig() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -28,8 +33,8 @@ function redisConfig() {
 
 function modo() {
   if (redisConfig()) return "redis";
+  if (emProducao()) return "temporario";
   if (process.env.DB_FILE) return "arquivo";
-  if (process.env.VERCEL) return "temporario";
   return "arquivo";
 }
 
@@ -64,7 +69,7 @@ const USUARIOS_PADRAO = [
 ];
 
 function adminInicial() {
-  if (!process.env.VERCEL) {
+  if (!emProducao()) {
     const admin = USUARIOS_PADRAO.find(u => u.tipo === "admin");
     return { ...admin, senha: hashSenha(admin.senha), criadoEm: new Date().toISOString() };
   }
@@ -81,11 +86,11 @@ function adminInicial() {
 }
 
 function bancoVazio() {
-  const usuarios = process.env.VERCEL
+  const usuarios = emProducao()
     ? [adminInicial()]
     : USUARIOS_PADRAO.map(u => ({ ...u, senha: hashSenha(u.senha), criadoEm: new Date().toISOString() }));
   return {
-    versao: 2,
+    versao: 3,
     usuarios,
     sessoes: [],
     pacientes: [],
@@ -94,20 +99,30 @@ function bancoVazio() {
   };
 }
 
-/** Garante a estrutura atual (aceita o db.json antigo do projeto e migra os usuários). */
+/** Garante a estrutura atual e remove as contas de demonstração ao migrar para produção. */
 function normalizar(db) {
   if (!db || typeof db !== "object") return bancoVazio();
-  if (db.versao !== 2) {
+  if (db.versao !== 2 && db.versao !== 3) {
     const novo = bancoVazio();
     const nomesDemo = new Set(USUARIOS_PADRAO.map(u => u.usuario));
     const antigos = (Array.isArray(db.usuarios) ? db.usuarios : [])
-      .filter(u => !process.env.VERCEL || !nomesDemo.has(String(u?.usuario || "").toLowerCase()));
+      .filter(u => !emProducao() || !nomesDemo.has(String(u?.usuario || "").toLowerCase()));
     for (const u of antigos) {
       if (!u || !u.usuario || novo.usuarios.some(x => x.usuario === u.usuario)) continue;
       const tipo = ["admin", "atendimento", "triagem", "medico", "enfermagem"].includes(u.tipo) ? u.tipo : "atendimento";
       novo.usuarios.push({ usuario: u.usuario, senha: hashSenha(u.senha || "123"), tipo, nome: u.usuario, criadoEm: new Date().toISOString() });
     }
     return novo;
+  }
+  if (db.versao === 2) {
+    if (emProducao()) {
+      const nomesDemo = new Set(USUARIOS_PADRAO.map(u => u.usuario));
+      db.usuarios = (Array.isArray(db.usuarios) ? db.usuarios : [])
+        .filter(u => !nomesDemo.has(String(u?.usuario || "").toLowerCase()));
+      db.sessoes = (Array.isArray(db.sessoes) ? db.sessoes : [])
+        .filter(s => !nomesDemo.has(String(s?.usuario || "").toLowerCase()));
+    }
+    db.versao = 3;
   }
   db.usuarios = Array.isArray(db.usuarios) ? db.usuarios : [];
   db.sessoes = Array.isArray(db.sessoes) ? db.sessoes : [];
@@ -157,14 +172,14 @@ async function liberarLockRedis(token) {
 async function lerRedisComLock() {
   const bruto = await redis(["GET", KEY]);
   if (bruto) return normalizar(JSON.parse(bruto));
-  const inicial = process.env.VERCEL ? bancoVazio() : normalizar(lerSemente());
+  const inicial = emProducao() ? bancoVazio() : normalizar(lerSemente());
   await redis(["SET", KEY, JSON.stringify(inicial)]);
   return inicial;
 }
 
 async function ler() {
   const armazenamento = modo();
-  if (process.env.VERCEL && armazenamento !== "redis") {
+  if (emProducao() && armazenamento !== "redis") {
     throw new Error("Redis persistente obrigatório na Vercel. Conecte o banco antes de usar a API.");
   }
   if (armazenamento === "redis") {
