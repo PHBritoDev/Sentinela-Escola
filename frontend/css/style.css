@@ -316,3 +316,83 @@ input[readonly] { background: var(--superficie-2); }
   .usuario-topo .quem, .relogio { display: none; }
   .pagina { padding: 16px; }
 }
+
+/* ================================================================
+   Acabamento visual leve · Somente CSS + canvas opcional no login
+   ================================================================ */
+.login-arte > .login-vfx {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  opacity: .84;
+  pointer-events: none;
+  user-select: none;
+}
+
+.login-form {
+  background: radial-gradient(circle at 95% 10%, #edfdfa 0, transparent 42%), #fff;
+}
+
+.login-form .caixa {
+  padding: clamp(22px, 3vw, 32px);
+  border: 1px solid #e7f0f0;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 16px 50px rgba(15, 55, 70, .075);
+}
+
+.login-arte .marca-icone {
+  box-shadow: 0 5px 18px rgba(9, 53, 70, .26);
+}
+
+.btn:focus-visible,
+.nav a:focus-visible,
+.demo-lista button:focus-visible,
+.abas button:focus-visible {
+  outline: 3px solid #5eead4;
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .cartao,
+  .indicador {
+    transition: box-shadow .2s ease, border-color .2s ease;
+  }
+
+  .cartao:hover,
+  .indicador:hover {
+    border-color: #cbdfe0;
+    box-shadow: 0 5px 24px rgba(15, 55, 70, .09);
+  }
+
+  .etapas > div,
+  .demo-lista button {
+    transition: background-color .18s ease, border-color .18s ease, transform .18s ease;
+  }
+
+  .etapas > div:hover {
+    transform: translateX(3px);
+    background: rgba(255, 255, 255, .15);
+  }
+
+  .demo-lista button:hover {
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce), (prefers-reduced-data: reduce) {
+  .login-arte > .login-vfx { display: none; }
+  .etapas > div,
+  .demo-lista button,
+  .cartao,
+  .indicador { transition: none; }
+  .toast,
+  .item-fila[data-risco=vermelho] .senha { animation: none; }
+}
+
+@media print {
+  .login-arte > .login-vfx { display: none !important; }
+}
