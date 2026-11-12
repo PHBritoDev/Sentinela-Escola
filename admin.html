@@ -1,0 +1,696 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color" content="#5145cd">
+    <meta name="description" content="Painel de cadastro e gerenciamento de usuários.">
+
+    <title>Cadastro de Usuários | Painel Administrativo</title>
+
+    <link rel="stylesheet" href="/frontend/css/style.css">
+
+    <style>
+        :root {
+            --primary: #5145cd;
+            --primary-dark: #3930a4;
+            --primary-light: #eeedff;
+            --background: #f4f6fc;
+            --surface: #ffffff;
+            --text: #202541;
+            --muted: #747b95;
+            --border: #e5e8f2;
+            --success: #12805c;
+            --danger: #c83f52;
+            --radius: 18px;
+            --shadow: 0 12px 35px rgba(35, 42, 90, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            min-height: 100%;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 35px 18px;
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(ellipse at 8% 0%, #e6e5ff 0, transparent 35%),
+                radial-gradient(ellipse at 100% 90%, #e0f0ff 0, transparent 32%),
+                var(--background);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 720px;
+            margin: 20px auto;
+            padding: 34px;
+            background: var(--surface);
+            border: 1px solid rgba(229, 232, 242, 0.9);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            animation: entrar 0.45s ease both;
+        }
+
+        .voltar {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 27px;
+            color: var(--primary);
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: color 0.2s, gap 0.2s;
+        }
+
+        .voltar:hover {
+            gap: 12px;
+            color: var(--primary-dark);
+        }
+
+        .cabecalho {
+            margin-bottom: 28px;
+        }
+
+        .etiqueta {
+            display: inline-block;
+            margin-bottom: 12px;
+            padding: 6px 11px;
+            color: var(--primary);
+            background: var(--primary-light);
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            margin: 0 0 9px;
+            font-size: clamp(25px, 5vw, 33px);
+            line-height: 1.25;
+            letter-spacing: -1px;
+            font-weight: 800;
+        }
+
+        .subtitulo {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        #formUsuario {
+            display: grid;
+            gap: 18px;
+        }
+
+        .campo {
+            display: grid;
+            gap: 7px;
+        }
+
+        .campo label {
+            color: #414864;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        input,
+        select {
+            display: block;
+            width: 100%;
+            min-height: 52px;
+            margin: 0;
+            padding: 13px 15px;
+            color: var(--text);
+            background: #fafbff;
+            border: 1px solid #dfe3ef;
+            border-radius: 12px;
+            outline: none;
+            font-family: inherit;
+            font-size: 14px;
+            transition:
+                border-color 0.2s,
+                box-shadow 0.2s,
+                background 0.2s;
+        }
+
+        input::placeholder {
+            color: #a1a7ba;
+        }
+
+        input:hover,
+        select:hover {
+            border-color: #b9b5f0;
+        }
+
+        input:focus,
+        select:focus {
+            background: #fff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(81, 69, 205, 0.12);
+        }
+
+        button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            width: 100%;
+            min-height: 53px;
+            margin-top: 5px;
+            padding: 14px 20px;
+            color: #fff;
+            background: linear-gradient(135deg, #6557e8, #493bbd);
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 7px 16px rgba(81, 69, 205, 0.22);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 750;
+            transition:
+                transform 0.2s,
+                box-shadow 0.2s,
+                opacity 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 22px rgba(81, 69, 205, 0.3);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:focus-visible {
+            outline: 3px solid #aaa3ff;
+            outline-offset: 3px;
+        }
+
+        button:disabled {
+            opacity: 0.65;
+            cursor: wait;
+            box-shadow: none;
+        }
+
+        .mensagem {
+            margin-top: 15px;
+            color: var(--muted);
+            font-size: 13px;
+            overflow-wrap: anywhere;
+        }
+
+        .mensagem:empty {
+            display: none;
+        }
+
+        .mensagem.sucesso,
+        .mensagem.erro {
+            padding: 12px 14px;
+            border: 1px solid transparent;
+            border-radius: 10px;
+        }
+
+        .mensagem.sucesso {
+            color: var(--success);
+            background: #eaf8f1;
+            border-color: #c8ecda;
+        }
+
+        .mensagem.erro {
+            color: var(--danger);
+            background: #fff0f1;
+            border-color: #f7d3d8;
+        }
+
+        .separador {
+            height: 1px;
+            margin: 32px 0;
+            background: var(--border);
+            border: 0;
+        }
+
+        .titulo-lista {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .icone-lista {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            width: 44px;
+            height: 44px;
+            color: var(--primary);
+            background: var(--primary-light);
+            border-radius: 13px;
+            font-size: 22px;
+        }
+
+        h3 {
+            margin: 0 0 4px;
+            font-size: 19px;
+            letter-spacing: -0.4px;
+        }
+
+        #listaUsuarios {
+            display: grid;
+            gap: 12px;
+        }
+
+        .estado-lista {
+            padding: 24px 15px;
+            color: var(--muted);
+            background: #fafbff;
+            border: 1px dashed #dce0ed;
+            border-radius: 12px;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            margin: 0;
+            padding: 18px;
+            background: linear-gradient(120deg, #fafaff, #fff);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow-wrap: anywhere;
+            transition:
+                border-color 0.2s,
+                transform 0.2s,
+                box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: #c9c4ff;
+            box-shadow: 0 7px 18px rgba(35, 42, 90, 0.06);
+        }
+
+        .card-info {
+            min-width: 0;
+        }
+
+        .nome-usuario {
+            margin: 0;
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 750;
+            overflow-wrap: anywhere;
+        }
+
+        .detalhe-usuario {
+            margin: 5px 0 0;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .setor {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 45%;
+            flex-shrink: 0;
+            padding: 7px 11px;
+            color: var(--primary-dark);
+            background: var(--primary-light);
+            border: 1px solid #e0ddff;
+            border-radius: 9px;
+            font-size: 11px;
+            font-weight: 750;
+            text-align: center;
+            overflow-wrap: anywhere;
+        }
+
+        @keyframes entrar {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 12px;
+            }
+
+            .container {
+                margin: 8px auto;
+                padding: 24px 19px;
+                border-radius: 19px;
+            }
+
+            h2 {
+                font-size: 27px;
+            }
+
+            .card {
+                padding: 14px;
+                gap: 10px;
+            }
+
+            .setor {
+                font-size: 10px;
+                padding: 6px 8px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .container {
+                padding: 20px 14px;
+            }
+
+            .card {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .setor {
+                max-width: 100%;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+
+        <a href="index.html" class="voltar">
+            ← Voltar para o Login
+        </a>
+
+        <header class="cabecalho">
+            <span class="etiqueta">Painel administrativo</span>
+
+            <h2>Cadastro de Usuários</h2>
+
+            <p class="subtitulo">
+                Gerencie os acessos e organize os usuários por setor.
+            </p>
+        </header>
+
+        <form id="formUsuario">
+            <div class="campo">
+                <label for="usuario">Nome de usuário</label>
+
+                <input
+                    type="text"
+                    id="usuario"
+                    name="usuario"
+                    placeholder="Digite o nome de usuário"
+                    autocomplete="username"
+                    maxlength="100"
+                    required
+                >
+            </div>
+
+            <div class="campo">
+                <label for="senha">Senha de acesso</label>
+
+                <input
+                    type="password"
+                    id="senha"
+                    name="senha"
+                    placeholder="Crie uma senha"
+                    autocomplete="new-password"
+                    required
+                >
+            </div>
+
+            <div class="campo">
+                <label for="tipo">Setor de atuação</label>
+
+                <select id="tipo" name="tipo" required>
+                    <option value="">Selecione o setor</option>
+                    <option value="atendimento">Atendimento</option>
+                    <option value="triagem">Triagem</option>
+                    <option value="medico">Médico</option>
+                </select>
+            </div>
+
+            <button type="submit" id="btnCadastrar">
+                <span aria-hidden="true">＋</span>
+                Cadastrar usuário
+            </button>
+        </form>
+
+        <div
+            id="mensagem"
+            class="mensagem"
+            role="status"
+            aria-live="polite"
+        ></div>
+
+        <hr class="separador">
+
+        <section aria-labelledby="tituloUsuarios">
+            <div class="titulo-lista">
+                <span class="icone-lista" aria-hidden="true">♙</span>
+
+                <div>
+                    <h3 id="tituloUsuarios">Usuários cadastrados</h3>
+
+                    <p class="subtitulo">
+                        Contas registradas no sistema.
+                    </p>
+                </div>
+            </div>
+
+            <div
+                id="listaUsuarios"
+                class="estado-lista"
+                aria-live="polite"
+            >
+                Carregando usuários...
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        "use strict";
+
+        const form = document.getElementById("formUsuario");
+        const campoUsuario = document.getElementById("usuario");
+        const campoSenha = document.getElementById("senha");
+        const campoTipo = document.getElementById("tipo");
+        const botaoCadastrar = document.getElementById("btnCadastrar");
+        const listaUsuarios = document.getElementById("listaUsuarios");
+        const mensagem = document.getElementById("mensagem");
+
+        // Endereço original da API. Mantenha a porta do seu backend.
+        const API_URL = "http://localhost:3000/usuarios";
+
+        const nomesSetores = {
+            atendimento: "Atendimento",
+            triagem: "Triagem",
+            medico: "Médico"
+        };
+
+        function mostrarMensagem(texto, tipo = "") {
+            mensagem.textContent = texto;
+            mensagem.className = tipo
+                ? "mensagem " + tipo
+                : "mensagem";
+        }
+
+        function mostrarEstadoLista(texto) {
+            listaUsuarios.className = "estado-lista";
+            listaUsuarios.textContent = texto;
+        }
+
+        async function lerResposta(resposta) {
+            const texto = await resposta.text();
+
+            if (!texto) {
+                return {};
+            }
+
+            try {
+                return JSON.parse(texto);
+            } catch {
+                throw new Error(
+                    "O servidor retornou uma resposta inválida."
+                );
+            }
+        }
+
+        // Cadastrar usuário
+        form.addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const usuario = campoUsuario.value.trim();
+            const senha = campoSenha.value;
+            const tipo = campoTipo.value;
+
+            if (!usuario || !senha.trim() || !tipo) {
+                mostrarMensagem(
+                    "Preencha todos os campos corretamente.",
+                    "erro"
+                );
+                return;
+            }
+
+            botaoCadastrar.disabled = true;
+            botaoCadastrar.textContent = "Cadastrando...";
+            mostrarMensagem("");
+
+            try {
+                const resposta = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        usuario: usuario,
+                        senha: senha,
+                        tipo: tipo
+                    })
+                });
+
+                const dados = await lerResposta(resposta);
+
+                if (!resposta.ok || dados.erro) {
+                    throw new Error(
+                        dados.erro ||
+                        "Não foi possível cadastrar o usuário."
+                    );
+                }
+
+                mostrarMensagem(
+                    "Usuário cadastrado com sucesso!",
+                    "sucesso"
+                );
+
+                form.reset();
+
+                await carregarUsuarios();
+
+            } catch (erro) {
+                console.error("Erro no cadastro:", erro);
+
+                mostrarMensagem(
+                    "Erro ao cadastrar. Verifique se o servidor está ativo e se os dados estão corretos. " +
+                    (erro.message || ""),
+                    "erro"
+                );
+
+            } finally {
+                botaoCadastrar.disabled = false;
+                botaoCadastrar.innerHTML =
+                    '<span aria-hidden="true">＋</span> Cadastrar usuário';
+            }
+        });
+
+        // Carregar usuários cadastrados
+        async function carregarUsuarios() {
+            mostrarEstadoLista("Carregando usuários...");
+
+            try {
+                const resposta = await fetch(API_URL);
+                const dados = await lerResposta(resposta);
+
+                if (!resposta.ok) {
+                    throw new Error("Erro HTTP " + resposta.status);
+                }
+
+                const usuarios = Array.isArray(dados)
+                    ? dados
+                    : dados.usuarios;
+
+                if (!Array.isArray(usuarios)) {
+                    throw new Error(
+                        "O servidor não retornou uma lista válida."
+                    );
+                }
+
+                listaUsuarios.className = "";
+
+                if (usuarios.length === 0) {
+                    mostrarEstadoLista(
+                        "Nenhum usuário cadastrado ainda."
+                    );
+                    return;
+                }
+
+                listaUsuarios.replaceChildren();
+
+                usuarios.forEach(function(u) {
+                    const card = document.createElement("article");
+                    card.className = "card";
+
+                    const info = document.createElement("div");
+                    info.className = "card-info";
+
+                    const nome = document.createElement("p");
+                    nome.className = "nome-usuario";
+                    nome.textContent = u.usuario || "Usuário sem nome";
+
+                    const detalhe = document.createElement("p");
+                    detalhe.className = "detalhe-usuario";
+                    detalhe.textContent = "Conta cadastrada no sistema";
+
+                    const setor = document.createElement("span");
+                    setor.className = "setor";
+                    setor.textContent =
+                        nomesSetores[u.tipo] || "Setor não identificado";
+
+                    info.appendChild(nome);
+                    info.appendChild(detalhe);
+
+                    card.appendChild(info);
+                    card.appendChild(setor);
+
+                    listaUsuarios.appendChild(card);
+                });
+
+            } catch (erro) {
+                console.error("Erro ao carregar usuários:", erro);
+
+                mostrarEstadoLista(
+                    "Não foi possível carregar os usuários. Verifique se o backend está ativo e acessível."
+                );
+            }
+        }
+
+        // Carrega a listagem ao abrir a página.
+        carregarUsuarios();
+    </script>
+</body>
+</html>
