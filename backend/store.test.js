@@ -30,7 +30,9 @@ test("Vercel requires Redis and bootstraps only an explicitly configured adminis
     assert.equal(store.senhaConfere(process.env.SENTINELA_ADMIN_PASSWORD, db.usuarios[0].senha), true);
 
     process.env.SENTINELA_ADMIN_PASSWORD = "curta";
-    assert.throws(() => store.bancoVazio(), /pelo menos 16 caracteres/);
+    assert.throws(() => store.bancoVazio(), /pelo menos 8 caracteres/);
+    process.env.SENTINELA_ADMIN_PASSWORD = "Oito8chr";
+    assert.equal(store.senhaConfere("Oito8chr", store.bancoVazio().usuarios[0].senha), true);
 
     process.env.SENTINELA_ADMIN_PASSWORD = "SenhaForteDeTeste-123!";
     const legado = store.normalizar({

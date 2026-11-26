@@ -154,7 +154,7 @@ function exigir(...tipos) {
 
 // Limite de tentativas de login por IP e por usuário (memória do processo; reinicia com o serviço).
 const tentativas = new Map();
-const JANELA_MS = 10 * 60e3, MAX_FALHAS = 6;
+const JANELA_MS = 15 * 60e3, MAX_FALHAS = 5;
 function bloqueado(chave) {
   const t = tentativas.get(chave); if (!t) return false;
   if (Date.now() - t.inicio > JANELA_MS) { tentativas.delete(chave); return false; }
@@ -181,7 +181,11 @@ app.post("/api/login", rota(async (req, res) => {
     req.usuario = publicoUsuario(u); auditar(db, req, "login");
     return { token, usuario: publicoUsuario(u) };
   });
-  if (!resultado) { chaves.forEach(falhou); return erro(res, 401, "Usuário ou senha incorretos."); }
+  if (!resultado) {
+    chaves.forEach(falhou);
+    await new Promise(r => setTimeout(r, 600)); // atraso fixo: encarece tentativas em sequência
+    return erro(res, 401, "Usuário ou senha incorretos.");
+  }
   chaves.forEach(c => tentativas.delete(c));
   definirCookie(res, resultado.token, SESSAO_HORAS * 3600);
   res.json({ ...resultado.usuario, aviso: AVISO });
@@ -220,7 +224,7 @@ app.post("/api/usuarios", exigir("admin"), rota(async (req, res) => {
   const senha = String(req.body?.senha || "");
   const tipo = texto(req.body?.tipo, 20).toLowerCase();
   if (!/^[a-z0-9._-]{3,40}$/.test(usuario)) return erro(res, 400, "Usuário deve ter 3 a 40 caracteres (letras, números, ponto, hífen).");
-  if (senha.length < 12) return erro(res, 400, "A senha precisa de pelo menos 12 caracteres.");
+  if (senha.length < 8) return erro(res, 400, "A senha precisa de pelo menos 8 caracteres.");
   if (!TIPOS.includes(tipo)) return erro(res, 400, "Perfil inválido.");
   const novo = await store.alterar(db => {
     if (db.usuarios.some(u => u.usuario.toLowerCase() === usuario)) throw falha(409, "Esse usuário já existe.");
@@ -518,7 +522,7 @@ app.get("/api/health", rota(async (req, res) => {
   const m = store.modo();
   const persistente = m === "redis" || !store.producao() || !!process.env.DB_FILE;
   let ok = true, admin = "configurado";
-  try { store.credenciaisAdmin(); } catch (e) { admin = /PASSWORD/.test(e.message) ? "senha ausente ou com menos de 16 caracteres" : "usuário ausente ou inválido"; }
+  try { store.credenciaisAdmin(); } catch (e) { admin = /PASSWORD/.test(e.message) ? "senha ausente ou com menos de 8 caracteres" : "usuário ausente ou inválido"; }
   try { await store.ler(); } catch (e) { ok = false; }
   res.status(ok ? 200 : 503).json({ ok, servico: "Sumaúma", armazenamento: m, persistente, admin });
 }));
