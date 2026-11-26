@@ -18,9 +18,9 @@ Não existem contas de demonstração. O administrador vem **somente** das vari�
 | Variável | Regra |
 |---|---|
 | `SENTINELA_ADMIN_USER` | 3–40 caracteres (`a-z 0-9 . _ -`) |
-| `SENTINELA_ADMIN_PASSWORD` | mínimo 16 caracteres; trocar a senha aqui e reiniciar faz a rotação e encerra as sessões desse admin |
+| `SENTINELA_ADMIN_PASSWORD` | mínimo 8 caracteres (login limitado a 5 erros por 15 min, por IP e por usuário); trocar a senha aqui e reiniciar faz a rotação e encerra as sessões desse admin |
 
-Em produção (`NODE_ENV=production`, Render ou Vercel) o servidor **recusa iniciar o banco** sem essas variáveis (`/api/health` responde 503). No computador, sem as variáveis, é gerada uma senha aleatória em `backend/data/credenciais-locais.txt` (fora do Git). A equipe é criada pelo admin no painel (senhas de 12+ caracteres). Bancos antigos são migrados: contas de demonstração conhecidas são removidas, senhas sem hash ficam bloqueadas, sessões antigas são revogadas e CPF/telefone/nascimento são apagados.
+Em produção (`NODE_ENV=production`, Render ou Vercel) o servidor **recusa iniciar o banco** sem essas variáveis (`/api/health` responde 503). No computador, sem as variáveis, é gerada uma senha aleatória em `backend/data/credenciais-locais.txt` (fora do Git). A equipe é criada pelo admin no painel (senhas de 8+ caracteres). Bancos antigos são migrados: contas de demonstração conhecidas são removidas, senhas sem hash ficam bloqueadas, sessões antigas são revogadas e CPF/telefone/nascimento são apagados.
 
 ## Rodar no computador
 ```bash

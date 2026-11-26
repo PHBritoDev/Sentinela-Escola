@@ -72,7 +72,7 @@ function credenciaisAdmin() {
   const senha = String(process.env.SENTINELA_ADMIN_PASSWORD || "").trim();
   if (usuario || senha || producao()) {
     if (!/^[a-z0-9._-]{3,40}$/.test(usuario)) throw new Error("Configure SENTINELA_ADMIN_USER (3 a 40 caracteres: letras, números, ponto, hífen).");
-    if (senha.length < 16) throw new Error("Configure SENTINELA_ADMIN_PASSWORD com pelo menos 16 caracteres.");
+    if (senha.length < 8) throw new Error("Configure SENTINELA_ADMIN_PASSWORD com pelo menos 8 caracteres.");
     return { usuario, senha, origem: "ambiente" };
   }
   // Desenvolvimento local sem variáveis: senha aleatória, gravada só no disco local (nunca em log, Git ou resposta da API).
