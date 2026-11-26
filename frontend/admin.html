@@ -20,7 +20,7 @@
       <a class="btn btn-secundario" href="tv.html" target="_blank" rel="noopener">📺 Abrir TV</a>
     </div>
 
-    <div id="aviso-armazenamento"></div>
+    <details style="margin-bottom:12px"><summary>Estado do sistema</summary><div id="aviso-armazenamento"></div></details>
     <div class="indicadores" id="indicadores"></div>
 
     <div class="grade grade-2-inv">
@@ -100,9 +100,9 @@
           return "<tr><td><b>" + esc(p.senha) + "</b></td><td>" + esc(p.nome) + ' <small style="color:var(--texto-suave)">' + esc(p.codigo || "") + "</small></td><td>" + (seloRisco(p.triagem && p.triagem.risco) || "—") + "</td><td>" + seloStatus(p.status) + "</td><td>" + hora(p.criadoEm) + "</td><td>" + min + " min</td></tr>";
         }).join("") : '<tr><td colspan="6" class="vazio">Nenhum paciente hoje.</td></tr>';
 
-        $("aviso-armazenamento").innerHTML = saude.persistente ? "" :
-          '<div class="alerta alerta-aviso" style="margin-bottom:20px"><span style="font-size:20px">⚠️</span><div><b>Os dados não estão em um banco permanente.</b>' +
-          " Conecte um Redis (Upstash/Vercel KV: KV_REST_API_URL e KV_REST_API_TOKEN) ou, no Render, um disco persistente com DB_FILE. Sem isso, os registros somem quando o serviço reinicia.</div></div>";
+        $("aviso-armazenamento").innerHTML = saude.persistente ? "<p>Armazenamento permanente ativo.</p>" :
+          '<div class="alerta alerta-aviso" style="margin-bottom:20px"><span style="font-size:20px">⚠️</span><div><b>Armazenamento temporário.</b>' +
+          " Os registros podem ser perdidos quando o serviço reinicia. Contate a administração técnica.</div></div>";
       } catch (e) { toast(e.message, "erro"); }
     }
 
