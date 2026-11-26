@@ -157,7 +157,7 @@
     if (document.querySelector(".rodape-demo")) return;
     const f = document.createElement("footer");
     f.className = "rodape-demo"; f.setAttribute("role", "note");
-    f.textContent = "Sumaúma · ambiente demonstrativo, não destinado a atendimento real. Use apenas dados fictícios.";
+    f.textContent = "Sumaúma · Unidade de ensino — dados fictícios; sem atendimento real.";
     document.body.appendChild(f);
   }
 
