@@ -1,51 +1,10 @@
 {
-  "versao": 2,
-  "usuarios": [
-    {
-      "usuario": "admin",
-      "senha": "scrypt$20e762e5bcb4c4fd9245b45d$bd5df812794deb365a805dbad9de52c82425e6d339df2d0c000ebb6684f8b1de",
-      "tipo": "admin",
-      "nome": "Administração",
-      "criadoEm": "2026-10-22T22:27:25.283Z"
-    },
-    {
-      "usuario": "atendimento",
-      "senha": "scrypt$b73ba5e08be15cd0d4e11c4e$be9d1b4387729ecc1f4b7b2fa34bbc5d6efe12ead0aa8cd9a9ece5792b4e67fe",
-      "tipo": "atendimento",
-      "nome": "Recepção",
-      "criadoEm": "2026-10-22T22:27:25.333Z"
-    },
-    {
-      "usuario": "triagem",
-      "senha": "scrypt$042fffaf4dc252047017e9f6$cfd45bf68ece3cbf71549b02f2a56b5eb7ea5e32ad21cf0f62864ee620f5aeb3",
-      "tipo": "triagem",
-      "nome": "Enfermagem da Triagem",
-      "criadoEm": "2026-10-22T22:27:25.370Z"
-    },
-    {
-      "usuario": "medico",
-      "senha": "scrypt$2097b10c76102b9b2748935e$11ceb83d04b70ad92bbbd20e0295e56228b64450e795dab6c87971dba0e39896",
-      "tipo": "medico",
-      "nome": "Dr(a). Plantão",
-      "criadoEm": "2026-10-22T22:27:25.407Z"
-    },
-    {
-      "usuario": "enfermagem",
-      "senha": "scrypt$b5dbd83a471d4ce47cc722c5$a0281f72d356e93081fcae3e4881fa1cafe777e60d64b759ab8342e0450b1fa1",
-      "tipo": "enfermagem",
-      "nome": "Sala de Medicação",
-      "criadoEm": "2026-10-22T22:27:25.444Z"
-    }
-  ],
+  "versao": 3,
+  "usuarios": [],
   "sessoes": [],
   "pacientes": [],
-  "tv": {
-    "atual": null,
-    "historico": []
-  },
-  "contadores": {
-    "normal": 0,
-    "preferencial": 0,
-    "dia": null
-  }
+  "tv": { "atual": null, "historico": [] },
+  "contadores": { "normal": 0, "preferencial": 0, "dia": null, "simulacao": 0 },
+  "estoque": [],
+  "auditoria": []
 }

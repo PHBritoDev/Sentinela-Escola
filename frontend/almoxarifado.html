@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f766e">
+  <title>Almoxarifado · Saúde+</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="pagina">
+    <div class="cabecalho-pagina">
+      <div>
+        <h1>Almoxarifado</h1>
+        <p>Estoque fictício de materiais da simulação. Entradas e saídas ficam registradas na auditoria.</p>
+      </div>
+    </div>
+
+    <div class="indicadores" id="indicadores"></div>
+
+    <div class="grade grade-2">
+      <section class="cartao">
+        <div class="cartao-cabeca">
+          <div><h2>Itens</h2><p id="resumo">Carregando…</p></div>
+          <div class="busca" style="width:min(240px,50%)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input id="busca" placeholder="Buscar item ou categoria" aria-label="Buscar item">
+          </div>
+        </div>
+        <ul class="fila" id="lista" style="max-height:none"></ul>
+      </section>
+
+      <section class="cartao" id="cartao-novo">
+        <div class="cartao-cabeca"><div><h2>Novo item</h2><p>Somente enfermagem e administração</p></div></div>
+        <form class="cartao-corpo campos" id="form" novalidate>
+          <div class="campo"><label for="nome">Nome *</label><input id="nome" maxlength="80" required></div>
+          <div class="campos-2">
+            <div class="campo"><label for="categoria">Categoria</label><input id="categoria" maxlength="40" placeholder="EPI, Material…"></div>
+            <div class="campo"><label for="unidade">Unidade</label><input id="unidade" maxlength="20" value="un"></div>
+          </div>
+          <div class="campos-2">
+            <div class="campo"><label for="quantidade">Quantidade</label><input id="quantidade" type="number" inputmode="numeric" min="0" value="0"></div>
+            <div class="campo"><label for="minimo">Estoque mínimo</label><input id="minimo" type="number" inputmode="numeric" min="0" value="10"></div>
+          </div>
+          <button class="btn" id="salvar" type="submit">Cadastrar item</button>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    const sessao = SP.proteger("almoxarifado");
+    const { API, esc, toast, acao } = SP;
+    const $ = id => document.getElementById(id);
+    const podeMover = ["admin", "enfermagem"].includes(sessao.tipo);
+    if (!podeMover) $("cartao-novo").hidden = true;
+    let itens = [];
+
+    function render() {
+      const termo = $("busca").value.trim().toLowerCase();
+      const lista = itens.filter(i => !termo || (i.nome + " " + i.categoria).toLowerCase().includes(termo));
+      const baixo = itens.filter(i => i.quantidade > 0 && i.quantidade < i.minimo).length, zerado = itens.filter(i => i.quantidade === 0).length;
+      $("indicadores").innerHTML = [["Itens", itens.length, "cadastrados"], ["Abaixo do mínimo", baixo, "repor em breve"], ["Em falta", zerado, "sem estoque"]]
+        .map(([a, b, c]) => '<div class="indicador"><span>' + a + "</span><b>" + b + "</b><small>" + c + "</small></div>").join("");
+      $("resumo").textContent = lista.length + " item(ns)";
+      if (!lista.length) { $("lista").innerHTML = '<li class="vazio"><span class="emoji">📦</span>' + (termo ? "Nada encontrado." : "Nenhum item. O administrador pode carregar o cenário de demonstração.") + "</li>"; return; }
+      $("lista").innerHTML = lista.map(i => {
+        const est = i.quantidade === 0 ? ["Em falta", "risco-vermelho"] : i.quantidade < i.minimo ? ["Baixo", "risco-amarelo"] : ["OK", "risco-verde"];
+        return '<li class="item-fila" style="cursor:default"><span class="senha" style="min-width:64px">' + esc(i.quantidade) + '<small style="display:block;font-size:11px;font-weight:600">' + esc(i.unidade) + "</small></span>" +
+          '<div><div class="nome">' + esc(i.nome) + '</div><div class="meta"><span>' + esc(i.categoria) + "</span><span>mín. " + esc(i.minimo) + '</span><span class="selo ' + est[1] + '">' + est[0] + "</span></div></div>" +
+          (podeMover ? '<div class="lado acoes"><button class="btn btn-secundario btn-p" data-mov="saida" data-id="' + esc(i.id) + '" aria-label="Saída de ' + esc(i.nome) + '">− Saída</button><button class="btn btn-p" data-mov="entrada" data-id="' + esc(i.id) + '" aria-label="Entrada de ' + esc(i.nome) + '">+ Entrada</button></div>' : "") + "</li>";
+      }).join("");
+    }
+
+    $("lista").addEventListener("click", e => {
+      const b = e.target.closest("[data-mov]"); if (!b) return;
+      const item = itens.find(i => i.id === b.dataset.id);
+      const q = Number(prompt((b.dataset.mov === "entrada" ? "Entrada" : "Saída") + " de " + item.nome + " — quantidade:", "1"));
+      if (!Number.isInteger(q) || q < 1) return;
+      acao(b, async () => { await API.post("/estoque/" + item.id + "/movimento", { tipo: b.dataset.mov, quantidade: q }); toast("Estoque atualizado.", "sucesso"); carregar(); });
+    });
+    $("busca").addEventListener("input", render);
+    $("form").addEventListener("submit", e => {
+      e.preventDefault();
+      acao($("salvar"), async () => {
+        await API.post("/estoque", { nome: $("nome").value, categoria: $("categoria").value, unidade: $("unidade").value, quantidade: Number($("quantidade").value), minimo: Number($("minimo").value) });
+        toast("Item cadastrado.", "sucesso"); $("form").reset(); carregar();
+      });
+    });
+    async function carregar() { try { itens = await API.get("/estoque"); render(); } catch (e) { $("resumo").textContent = e.message; } }
+    carregar();
+    SP.aCada(carregar, 15000);
+  </script>
+</body>
+</html>

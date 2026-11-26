@@ -125,3 +125,32 @@ test("Redis lock serializes writes from separate Vercel function instances", asy
     }
   }
 });
+
+test("Render/produção sem segredos falha fechado; migração remove CPF e revoga sessões", () => {
+  const keys = ["RENDER", "NODE_ENV", "VERCEL", "SENTINELA_ADMIN_USER", "SENTINELA_ADMIN_PASSWORD"];
+  const previous = Object.fromEntries(keys.map(k => [k, process.env[k]]));
+  try {
+    for (const k of keys) delete process.env[k];
+    process.env.RENDER = "true";
+    assert.throws(() => store.credenciaisAdmin());
+    assert.throws(() => store.bancoVazio());
+    process.env.SENTINELA_ADMIN_USER = "operador";
+    process.env.SENTINELA_ADMIN_PASSWORD = "SenhaForteDeTeste-123!";
+    const db = store.normalizar({
+      versao: 2, sessoes: [{ token: "antigo", usuario: "operador", expira: "2999-01-01" }],
+      usuarios: [{ usuario: "enfermagem", senha: store.hashSenha("123"), tipo: "enfermagem" }],
+      pacientes: [{ id: "a", nome: "Teste", cpf: "52998224725", telefone: "1199", nascimento: "1950-01-01", status: "finalizado" }],
+      tv: { atual: { senha: "N001", paciente: "Teste" }, historico: [{ senha: "N001", paciente: "Teste" }] }
+    });
+    assert.deepEqual(db.usuarios.map(u => u.usuario), ["operador"]);
+    assert.equal(db.sessoes.length, 0);
+    const p = db.pacientes[0];
+    assert.match(p.codigo, /^SIM-\d{4}$/);
+    assert.equal(p.cpf ?? p.telefone ?? p.nascimento, undefined);
+    assert.equal(typeof p.idade, "number");
+    assert.equal(db.tv.atual.paciente, undefined);
+    assert.equal(db.tv.historico[0].paciente, undefined);
+  } finally {
+    for (const k of keys) { if (previous[k] === undefined) delete process.env[k]; else process.env[k] = previous[k]; }
+  }
+});

@@ -2,103 +2,75 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0f766e">
-  <title>Entrar · Saúde+</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#16343d">
+  <meta name="description" content="Saúde+ · simulação escolar de pronto atendimento">
+  <title>Saúde+ · Pronto atendimento</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/hospital.css">
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" crossorigin>
+  <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
 </head>
-<body>
-  <main class="login">
-    <section class="login-arte">
-      <span class="marca"><span class="marca-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Saúde+<small>Pronto atendimento</small></span></span>
-      <div>
-        <h1>Do cadastro à alta, cada paciente no lugar certo.</h1>
-        <p>Recepção, triagem com classificação de risco, consultório, sala de medicação e painel de chamadas na TV — tudo conectado em tempo real.</p>
-        <div class="etapas">
-          <div><b>1</b><span><strong>Recepção</strong> cadastra o paciente e gera a senha.</span></div>
-          <div><b>2</b><span><strong>Triagem</strong> mede os sinais vitais e define a cor de risco.</span></div>
-          <div><b>3</b><span><strong>Médico</strong> atende pela ordem de gravidade e prescreve.</span></div>
-          <div><b>4</b><span><strong>Medicação</strong> administra e dá a alta. A <strong>TV</strong> chama cada etapa.</span></div>
-        </div>
-      </div>
-      <a href="tv.html" target="_blank" rel="noopener" style="color:#fff;font-weight:600">📺 Abrir o painel da TV da sala de espera</a>
-    </section>
+<body class="hall">
+  <div class="faixa-sim" role="note">Simulação escolar — não utilizar para atendimento real</div>
+  <div class="hall-poster" aria-hidden="true"></div>
+  <canvas id="cena" class="hall-cena" aria-hidden="true"></canvas>
+  <div id="pontos" class="hall-pontos" aria-label="Setores no hospital"></div>
 
-    <section class="login-form">
-      <form class="caixa" id="form" novalidate>
+  <header class="hall-topo">
+    <span class="marca"><span class="marca-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Saúde+<small>Pronto atendimento</small></span></span>
+    <div class="hall-topo-acoes">
+      <button type="button" class="chip" id="pular" hidden>Pular abertura ⏭</button>
+      <button type="button" class="chip" id="leve" aria-pressed="false" title="Desliga o 3D para economizar bateria e dados">Modo leve</button>
+      <a class="chip" href="tv.html" target="_blank" rel="noopener">📺 Painel da TV</a>
+    </div>
+  </header>
+
+  <section class="hall-setor" id="setor" hidden aria-live="polite">
+    <span class="hall-setor-cor" id="setor-cor"></span>
+    <div><h2 id="setor-nome"></h2><p id="setor-desc"></p><p class="hall-setor-acesso" id="setor-acesso"></p></div>
+    <div class="acoes"><button type="button" class="btn" id="setor-abrir">Abrir setor</button><button type="button" class="btn btn-fantasma" id="setor-voltar">← Visão geral</button></div>
+  </section>
+
+  <nav class="hall-menu" id="menu" aria-label="Setores">
+    <span class="hall-menu-titulo">Setores</span>
+    <div class="hall-menu-lista" id="menu-lista"></div>
+  </nav>
+
+  <aside class="hall-login" id="painel" data-aberto="1">
+    <button type="button" class="hall-login-alca" id="alca" aria-controls="form" aria-expanded="true"><span id="alca-texto">Entrar na equipe</span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 15 6-6 6 6"/></svg></button>
+    <form class="caixa" id="form" novalidate>
+      <div id="logado" hidden>
+        <h2>Olá, <span id="logado-nome"></span></h2>
+        <p class="sub" id="logado-perfil"></p>
+        <div class="acoes"><a class="btn btn-grande" id="logado-ir" href="#">Ir para meu setor</a><button type="button" class="btn btn-fantasma" id="logado-sair">Sair</button></div>
+      </div>
+      <div id="entrar-bloco">
         <h2>Entrar</h2>
-        <p class="sub">Use o usuário do seu setor.</p>
+        <p class="sub" id="sub">Use o usuário que a administração criou para o seu setor.</p>
         <div class="campos">
           <div class="campo">
             <label for="usuario">Usuário</label>
-            <input id="usuario" autocomplete="username" autocapitalize="none" required>
+            <input id="usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required>
           </div>
           <div class="campo">
             <label for="senha">Senha</label>
             <div class="com-sufixo">
               <input id="senha" type="password" autocomplete="current-password" required>
-              <button type="button" id="ver" class="btn btn-fantasma btn-p" style="position:absolute;right:4px;top:50%;transform:translateY(-50%)">ver</button>
+              <button type="button" id="ver" class="btn btn-fantasma btn-p" aria-label="Mostrar senha" style="position:absolute;right:4px;top:50%;transform:translateY(-50%)">ver</button>
             </div>
           </div>
           <button class="btn btn-grande" id="entrar" type="submit">Entrar</button>
         </div>
         <div class="erro-form" id="erro" role="alert"></div>
-
-        <div class="demo">
-          <b>Acesso de demonstração</b> — toque para preencher:
-          <div class="demo-lista">
-            <button type="button" data-u="atendimento" data-s="123">Recepção</button>
-            <button type="button" data-u="triagem" data-s="123">Triagem</button>
-            <button type="button" data-u="medico" data-s="123">Médico</button>
-            <button type="button" data-u="enfermagem" data-s="123">Medicação</button>
-            <button type="button" data-u="admin" data-s="admin123">Administração</button>
-          </div>
-        </div>
-      </form>
-    </section>
-  </main>
+        <p class="hall-nota">Ambiente de aula: use apenas nomes inventados. Não há contas de demonstração públicas.</p>
+      </div>
+    </form>
+  </aside>
 
   <script src="js/app.js"></script>
-  <script>
-    const s = SP.sessao();
-    if (s && s.token) location.replace((SP.PERFIS[s.tipo] || SP.PERFIS.atendimento).inicio);
-
-    const erro = document.getElementById("erro");
-    const mostrarErro = m => { erro.textContent = m; erro.classList.toggle("visivel", !!m); };
-    if (new URLSearchParams(location.search).has("expirou")) mostrarErro("Sua sessão expirou. Entre novamente.");
-
-    document.getElementById("ver").onclick = e => {
-      const i = document.getElementById("senha");
-      i.type = i.type === "password" ? "text" : "password";
-      e.target.textContent = i.type === "password" ? "ver" : "ocultar";
-    };
-    document.querySelectorAll(".demo-lista button").forEach(b => b.onclick = () => {
-      document.getElementById("usuario").value = b.dataset.u;
-      document.getElementById("senha").value = b.dataset.s;
-      document.getElementById("entrar").focus();
-    });
-
-    document.getElementById("form").addEventListener("submit", async e => {
-      e.preventDefault();
-      mostrarErro("");
-      const usuario = document.getElementById("usuario").value.trim();
-      const senha = document.getElementById("senha").value;
-      if (!usuario || !senha) return mostrarErro("Informe usuário e senha.");
-      const botao = document.getElementById("entrar");
-      botao.disabled = true; botao.textContent = "Entrando…";
-      try {
-        const r = await SP.API.post("/login", { usuario, senha });
-        SP.salvarSessao(r);
-        location.href = (SP.PERFIS[r.tipo] || SP.PERFIS.atendimento).inicio;
-      } catch (err) {
-        mostrarErro(err.message);
-        botao.disabled = false; botao.textContent = "Entrar";
-      }
-    });
-  </script>
-  <!-- Renderização 3D apenas decorativa: nunca bloqueia o formulário. -->
-  <script type="module" src="js/login-vfx.js"></script>
+  <script type="module" src="js/hall.js"></script>
 </body>
 </html>

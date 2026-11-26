@@ -1,54 +1,45 @@
-# Saúde+ · Sentinela — Pronto atendimento
+# Saúde+ · Sentinela — Pronto atendimento (simulação escolar)
 
-Sistema escolar de pronto atendimento: **Recepção → Triagem (classificação de risco) → Consultório → Sala de medicação**, com **painel de chamadas na TV** (som e voz) e **painel administrativo**.
+> **Simulação escolar — não utilizar para atendimento real.** Use apenas nomes inventados. O sistema não pede CPF, telefone, endereço nem data de nascimento: cada paciente recebe um código fictício `SIM-0000` e uma idade aproximada.
 
-As credenciais listadas abaixo são somente para desenvolvimento local. A Vercel não cria essas contas de demonstração.
+Fluxo: **Recepção → Triagem (classificação de risco) → Consultório → Sala de medicação**, com **painel de chamadas na TV** (só senha e local, som opcional), **almoxarifado** fictício e **painel administrativo** (equipe, auditoria, modo apresentação).
 
-## Como usar
+## Tela inicial: hospital 3D
+Na primeira visita de cada sessão há uma abertura de ~6 s (fachada → portas automáticas → hall → recepção) com botão **Pular** (ou Esc). Depois, cada setor tem um ponto clicável e um menu convencional; a câmera vai até o setor e o botão abre o módulo **somente se o perfil logado tiver permissão** (o servidor confere de novo). O login fica sempre acessível. Sem WebGL, com "reduzir movimento", **Modo leve** ou aparelho fraco, a tela usa uma versão simplificada ou ilustração 2D.
 
-| Perfil | Usuário | Senha | Tela |
-|---|---|---|---|
-| Recepção | `atendimento` | `123` | Cadastra paciente, gera a senha (N001 / P001 preferencial), chama no guichê |
-| Triagem | `triagem` | `123` | Sinais vitais, escala de dor, alergias → cor de risco automática |
-| Médico | `medico` | `123` | Fila por gravidade, ficha com alertas, prescrição e desfecho |
-| Medicação | `enfermagem` | `123` | Prescrições pendentes, registra a administração e a alta |
-| Administração | `admin` | `admin123` | Indicadores do dia, equipe (criar/excluir usuários), encerrar o dia |
+## Acesso
+Não existem contas de demonstração. O administrador vem **somente** das variáveis de ambiente:
 
-A TV fica em **/tv.html** (sem login). Na primeira vez, toque na tela para liberar o som; a tecla **F** coloca em tela cheia.
+| Variável | Regra |
+|---|---|
+| `SENTINELA_ADMIN_USER` | 3–40 caracteres (`a-z 0-9 . _ -`) |
+| `SENTINELA_ADMIN_PASSWORD` | mínimo 16 caracteres; trocar a senha aqui e reiniciar faz a rotação e encerra as sessões desse admin |
 
-### Classificação de risco (inspirada no Protocolo de Manchester)
-🔴 Emergência (imediato) · 🟠 Muito urgente (10 min) · 🟡 Urgente (60 min) · 🟢 Pouco urgente (120 min) · 🔵 Não urgente (240 min).
-A regra fica em `backend/triagem.js`: queixa + temperatura, saturação, frequência cardíaca, pressão e dor. Cada sinal só pode **subir** a cor.
+Em produção (`NODE_ENV=production`, Render ou Vercel) o servidor **recusa iniciar o banco** sem essas variáveis (`/api/health` responde 503). No computador, sem as variáveis, é gerada uma senha aleatória em `backend/data/credenciais-locais.txt` (fora do Git). A equipe é criada pelo admin no painel (senhas de 12+ caracteres). Bancos antigos são migrados: contas de demonstração conhecidas são removidas, senhas sem hash ficam bloqueadas, sessões antigas são revogadas e CPF/telefone/nascimento são apagados.
 
 ## Rodar no computador
-
 ```bash
-npm install
+npm ci
 npm start          # http://localhost:3000
-npm test           # testes automáticos (regras + fluxo completo da API)
+npm test           # regras, migração, permissões, CSRF, privacidade da TV, estoque, demo
 ```
-No computador os dados ficam em `backend/data/db.local.json` (criado sozinho). `backend/db.json` é só a semente com os usuários de demonstração.
 
-## Publicar na Vercel (importante para salvar os pacientes)
+## Publicar
+**Render (Web Service):** build `npm ci`, start `npm start`, health check `/api/health`. Defina `SENTINELA_ADMIN_USER` e `SENTINELA_ADMIN_PASSWORD` em *Environment*. O disco do Render é **efêmero**: sem persistência os dados somem a cada deploy/reinício. Para manter, use Redis (`KV_REST_API_URL` + `KV_REST_API_TOKEN` ou `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`) ou um disco persistente com `DB_FILE=/caminho/no/disco/db.json`.
 
-Na Vercel o disco das funções **não guarda arquivos** e cada acesso pode cair num servidor diferente — por isso, antes, o paciente "sumia" e a TV não recebia a chamada. Agora o sistema usa um banco Redis:
+**Vercel:** conecte Upstash Redis (Storage) e defina as mesmas variáveis do admin. Sem Redis a API fica indisponível (503) de propósito.
 
-1. No projeto da Vercel, abra **Storage → Create Database → Upstash (Redis)** e conecte ao projeto. As gravações usam um lock compartilhado no Redis para serializar alterações entre instâncias serverless.
-2. A Vercel cria sozinha as variáveis `KV_REST_API_URL` e `KV_REST_API_TOKEN` (também aceitamos `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`).
-3. Em **Settings → Environment Variables**, configure `SENTINELA_ADMIN_USER` (3–40 caracteres) e `SENTINELA_ADMIN_PASSWORD` (mínimo de 16 caracteres) para Production. Use uma senha única e guarde-a fora do repositório.
-4. Faça um novo deploy. Na Vercel, a API retorna erro de prontidão (`GET /api/health`, HTTP 503) até o Redis estar conectado e as credenciais iniciais do administrador serem configuradas.
-
-Na primeira inicialização de um banco vazio, somente o administrador configurado é criado. Contas de demonstração não são copiadas para a Vercel; novas senhas de equipe devem ter pelo menos 12 caracteres. Não use dados reais de pacientes até a instituição avaliar privacidade, controle de acesso, retenção e requisitos legais aplicáveis. Este projeto não declara conformidade regulatória nem substitui avaliação clínica.
+## Segurança
+Sessão em cookie `HttpOnly` + `SameSite=Strict` (+ `Secure` em produção), token guardado só como hash, expiração de 10 h e logout; CSRF exige o cabeçalho `X-Saude-Plus`; limite de tentativas de login; senhas com scrypt; autorização por perfil em toda rota; CSP e cabeçalhos de segurança; limite de 50 kB por requisição; auditoria de logins, trocas de setor e ações administrativas; ações destrutivas exigem confirmação digitada; arquivos internos não são servidos. A troca de setor do admin só existe dentro de uma sessão de admin válida e fica registrada.
 
 ## Estrutura
-
 ```
-api/index.js          função da Vercel (usa o mesmo app)
-backend/app.js        rotas da API (/api/...)
-backend/store.js      armazenamento: Redis (Vercel) ou arquivo (computador)
-backend/triagem.js    classificação de risco e ordem da fila
-backend/validacao.js  CPF, idade, textos
-frontend/             telas (HTML + css/style.css + js/app.js)
+api/index.js            função da Vercel (mesmo app)
+backend/app.js          rotas /api, autenticação, auditoria, estoque, demo
+backend/store.js        Redis ou arquivo, migração e admin por variável de ambiente
+backend/demo.js         cenário fictício (pacientes e estoque)
+backend/triagem.js      classificação de risco (didática, inspirada em Manchester) e ordem da fila
+frontend/index.html     tela inicial (login + hospital 3D: js/hall.js, js/hospital3d.js, js/setores.js)
+frontend/*.html         módulos; js/app.js com sessão, cabeçalho e faixa de simulação
 ```
-
-Segurança: senhas guardadas com hash (scrypt), sessão com token, cada perfil só acessa suas funções e todo texto exibido é escapado (sem injeção de HTML).
+A classificação de risco é **material didático**, sem validade clínica.

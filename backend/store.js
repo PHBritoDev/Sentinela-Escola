@@ -46,8 +46,7 @@ function hashSenha(senha) {
 }
 
 function senhaConfere(digitada, armazenada) {
-  if (!armazenada) return false;
-  if (!String(armazenada).startsWith("scrypt$")) return String(digitada) === String(armazenada);
+  if (!armazenada || !String(armazenada).startsWith("scrypt$")) return false; // texto puro nunca autentica
   const [, sal, hash] = String(armazenada).split("$");
   const teste = crypto.scryptSync(String(digitada), sal, 32);
   const ok = Buffer.from(hash, "hex");
@@ -55,67 +54,100 @@ function senhaConfere(digitada, armazenada) {
 }
 
 // ---------- formato do banco ----------
-const USUARIOS_PADRAO = [
-  { usuario: "admin", senha: "admin123", tipo: "admin", nome: "Administração" },
-  { usuario: "atendimento", senha: "123", tipo: "atendimento", nome: "Recepção" },
-  { usuario: "triagem", senha: "123", tipo: "triagem", nome: "Enfermagem da Triagem" },
-  { usuario: "medico", senha: "123", tipo: "medico", nome: "Dr(a). Plantão" },
-  { usuario: "enfermagem", senha: "123", tipo: "enfermagem", nome: "Sala de Medicação" }
-];
+// Produção = Render, Vercel ou NODE_ENV=production. Em produção NUNCA existem contas de demonstração nem senha padrão:
+// o administrador vem de SENTINELA_ADMIN_USER / SENTINELA_ADMIN_PASSWORD (segredos da plataforma) e, sem eles, a API
+// falha fechada. No computador, sem as variáveis, é gerada uma senha aleatória gravada em backend/data/ (fora do Git).
+const PERFIS = ["admin", "atendimento", "triagem", "medico", "enfermagem"];
+const DEMO_LEGADO = { admin: "admin123", atendimento: "123", triagem: "123", medico: "123", enfermagem: "123" };
+const VERSAO = 3;
+let conferido = null;
 
-function adminInicial() {
-  if (!process.env.VERCEL) {
-    const admin = USUARIOS_PADRAO.find(u => u.tipo === "admin");
-    return { ...admin, senha: hashSenha(admin.senha), criadoEm: new Date().toISOString() };
-  }
+function producao() {
+  return process.env.NODE_ENV === "production" || !!process.env.RENDER || !!process.env.VERCEL;
+}
 
+function credenciaisAdmin() {
   const usuario = String(process.env.SENTINELA_ADMIN_USER || "").trim().toLowerCase();
   const senha = String(process.env.SENTINELA_ADMIN_PASSWORD || "");
-  if (!/^[a-z0-9._-]{3,40}$/.test(usuario)) {
-    throw new Error("Configure SENTINELA_ADMIN_USER (3 a 40 caracteres) antes da inicialização.");
+  if (usuario || senha || producao()) {
+    if (!/^[a-z0-9._-]{3,40}$/.test(usuario)) throw new Error("Configure SENTINELA_ADMIN_USER (3 a 40 caracteres: letras, números, ponto, hífen).");
+    if (senha.length < 16) throw new Error("Configure SENTINELA_ADMIN_PASSWORD com pelo menos 16 caracteres.");
+    return { usuario, senha, origem: "ambiente" };
   }
-  if (senha.length < 16) {
-    throw new Error("Configure SENTINELA_ADMIN_PASSWORD com pelo menos 16 caracteres antes da inicialização.");
-  }
-  return { usuario, senha: hashSenha(senha), tipo: "admin", nome: "Administração", criadoEm: new Date().toISOString() };
+  // Desenvolvimento local sem variáveis: senha aleatória, gravada só no disco local (nunca em log, Git ou resposta da API).
+  const arq = path.join(__dirname, "data", "credenciais-locais.txt");
+  try {
+    const [u, s] = fs.readFileSync(arq, "utf8").trim().split("\n").map(l => l.split("=").slice(1).join("="));
+    if (u && s && s.length >= 16) return { usuario: u, senha: s, origem: "local" };
+  } catch { /* gera abaixo */ }
+  const nova = { usuario: "admin", senha: crypto.randomBytes(18).toString("base64url"), origem: "local" };
+  fs.mkdirSync(path.dirname(arq), { recursive: true });
+  fs.writeFileSync(arq, "usuario=" + nova.usuario + "\nsenha=" + nova.senha + "\n", { mode: 0o600 });
+  return nova;
+}
+
+function adminInicial() {
+  const c = credenciaisAdmin();
+  return { usuario: c.usuario, senha: hashSenha(c.senha), tipo: "admin", nome: "Administração", criadoEm: new Date().toISOString() };
 }
 
 function bancoVazio() {
-  const usuarios = process.env.VERCEL
-    ? [adminInicial()]
-    : USUARIOS_PADRAO.map(u => ({ ...u, senha: hashSenha(u.senha), criadoEm: new Date().toISOString() }));
   return {
-    versao: 2,
-    usuarios,
+    versao: VERSAO,
+    usuarios: [adminInicial()],
     sessoes: [],
     pacientes: [],
     tv: { atual: null, historico: [] },
-    contadores: { normal: 0, preferencial: 0, dia: null }
+    contadores: { normal: 0, preferencial: 0, dia: null, simulacao: 0 },
+    estoque: [],
+    auditoria: []
   };
 }
 
-/** Garante a estrutura atual (aceita o db.json antigo do projeto e migra os usuários). */
+/** Conta de demonstração antiga ainda com a senha pública conhecida? (precisa sair de qualquer banco existente) */
+function contaDemoInsegura(u) {
+  const nome = String(u?.usuario || "").toLowerCase();
+  if (!Object.prototype.hasOwnProperty.call(DEMO_LEGADO, nome)) return false;
+  const s = String(u.senha || "");
+  return s === DEMO_LEGADO[nome] || senhaConfere(DEMO_LEGADO[nome], s);
+}
+
+/** Garante a estrutura atual, migra bancos antigos e remove contas/sessões inseguras. */
 function normalizar(db) {
   if (!db || typeof db !== "object") return bancoVazio();
-  if (db.versao !== 2) {
-    const novo = bancoVazio();
-    const nomesDemo = new Set(USUARIOS_PADRAO.map(u => u.usuario));
-    const antigos = (Array.isArray(db.usuarios) ? db.usuarios : [])
-      .filter(u => !process.env.VERCEL || !nomesDemo.has(String(u?.usuario || "").toLowerCase()));
-    for (const u of antigos) {
-      if (!u || !u.usuario || novo.usuarios.some(x => x.usuario === u.usuario)) continue;
-      const tipo = ["admin", "atendimento", "triagem", "medico", "enfermagem"].includes(u.tipo) ? u.tipo : "atendimento";
-      novo.usuarios.push({ usuario: u.usuario, senha: hashSenha(u.senha || "123"), tipo, nome: u.usuario, criadoEm: new Date().toISOString() });
-    }
-    return novo;
+  const antigo = db.versao !== VERSAO;
+  db.usuarios = (Array.isArray(db.usuarios) ? db.usuarios : []).filter(u => u && u.usuario && !contaDemoInsegura(u));
+  for (const u of db.usuarios) {
+    if (!PERFIS.includes(u.tipo)) u.tipo = "atendimento";
+    if (!String(u.senha || "").startsWith("scrypt$")) u.senha = null; // senha em texto puro: conta bloqueada até o admin redefinir
   }
-  db.usuarios = Array.isArray(db.usuarios) ? db.usuarios : [];
-  db.sessoes = Array.isArray(db.sessoes) ? db.sessoes : [];
+  db.sessoes = antigo ? [] : (Array.isArray(db.sessoes) ? db.sessoes : []); // migração revoga todas as sessões antigas
   db.pacientes = Array.isArray(db.pacientes) ? db.pacientes : [];
   db.tv = db.tv && typeof db.tv === "object" ? db.tv : { atual: null, historico: [] };
   db.tv.historico = Array.isArray(db.tv.historico) ? db.tv.historico : [];
-  db.contadores = db.contadores || { normal: 0, preferencial: 0, dia: null };
-  if (!db.usuarios.some(u => u.tipo === "admin")) db.usuarios.unshift(adminInicial());
+  db.contadores = { normal: 0, preferencial: 0, dia: null, simulacao: 0, ...(db.contadores || {}) };
+  db.estoque = Array.isArray(db.estoque) ? db.estoque : [];
+  db.auditoria = Array.isArray(db.auditoria) ? db.auditoria : [];
+  // Privacidade: nenhum CPF, telefone ou data de nascimento real; cada paciente recebe um código fictício SIM-0000.
+  for (const p of db.pacientes) {
+    if (!p.codigo) { db.contadores.simulacao += 1; p.codigo = "SIM-" + String(db.contadores.simulacao).padStart(4, "0"); }
+    if (p.nascimento && p.idade == null) { const n = new Date(p.nascimento); if (!Number.isNaN(n.getTime())) p.idade = Math.max(0, new Date().getFullYear() - n.getFullYear()); }
+    delete p.cpf; delete p.telefone; delete p.nascimento;
+  }
+  for (const c of [db.tv.atual, ...db.tv.historico]) if (c) delete c.paciente; // TV pública: só senha e local
+  // Administrador da plataforma: sempre existe e a senha acompanha o segredo (girar o segredo = girar a senha).
+  const c = credenciaisAdmin();
+  const adm = db.usuarios.find(u => u.usuario.toLowerCase() === c.usuario);
+  if (!adm) db.usuarios.unshift({ usuario: c.usuario, senha: hashSenha(c.senha), tipo: "admin", nome: "Administração", criadoEm: new Date().toISOString() });
+  else {
+    adm.tipo = "admin";
+    const chave = adm.senha + "|" + c.senha; // scrypt é caro: confere só quando o hash ou o segredo mudam
+    if (conferido !== chave) {
+      if (!senhaConfere(c.senha, adm.senha)) { adm.senha = hashSenha(c.senha); db.sessoes = db.sessoes.filter(s => s.usuario !== adm.usuario); }
+      conferido = adm.senha + "|" + c.senha;
+    }
+  }
+  db.versao = VERSAO;
   return db;
 }
 
@@ -157,7 +189,7 @@ async function liberarLockRedis(token) {
 async function lerRedisComLock() {
   const bruto = await redis(["GET", KEY]);
   if (bruto) return normalizar(JSON.parse(bruto));
-  const inicial = process.env.VERCEL ? bancoVazio() : normalizar(lerSemente());
+  const inicial = normalizar(lerSemente());
   await redis(["SET", KEY, JSON.stringify(inicial)]);
   return inicial;
 }
@@ -215,4 +247,4 @@ function alterar(fn) {
   return tarefa;
 }
 
-module.exports = { ler, alterar, modo, hashSenha, senhaConfere, bancoVazio, normalizar };
+module.exports = { ler, alterar, modo, hashSenha, senhaConfere, bancoVazio, normalizar, producao, credenciaisAdmin, PERFIS };

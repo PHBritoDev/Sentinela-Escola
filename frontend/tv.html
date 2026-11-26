@@ -110,7 +110,7 @@
   </main>
 
   <footer>
-    <span class="tag">AVISO</span>
+    <span class="tag">SIMULAÇÃO ESCOLAR</span>
     <span id="dica"></span>
     <span class="conexao" id="conexao">● conectando…</span>
   </footer>
@@ -171,7 +171,7 @@
     function falar(c) {
       if (!window.speechSynthesis) return;
       const senha = String(c.senha || "").split("").join(" ");
-      const texto = "Senha " + senha + ". " + c.paciente + ". Dirija-se " + (LOCAL_FALADO[c.local] || "ao atendimento") + " " + Number(c.numero) + ".";
+      const texto = "Senha " + senha + ". Dirija-se " + (LOCAL_FALADO[c.local] || "ao atendimento") + " " + Number(c.numero) + ".";
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(texto);
       u.lang = "pt-BR"; u.rate = .92;
@@ -185,7 +185,7 @@
       document.documentElement.style.setProperty("--cor", CORES[c.local] || "#14b8a6");
       atual.classList.remove("aguardando");
       $("senha").hidden = false; $("senha").textContent = c.senha || "";
-      $("nome").textContent = c.paciente;
+      $("nome").textContent = "Senha chamada";
       $("destino").hidden = false; $("destino").querySelector("span").textContent = PREP[c.local] || "dirija-se ao"; $("local").textContent = c.localNome + " " + c.numero;
     }
 
@@ -194,7 +194,7 @@
       lista.filter(h => h.id !== atualId).slice(0, 5).forEach(h => {
         const li = document.createElement("li");
         const b = document.createElement("b"), n = document.createElement("strong"), s = document.createElement("span");
-        b.textContent = h.senha || "—"; n.textContent = h.paciente; s.textContent = h.localNome + " " + h.numero + " · " + new Date(h.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        b.textContent = h.senha || "—"; n.textContent = h.localNome + " " + h.numero; s.textContent = new Date(h.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
         b.style.color = CORES[h.local] || "#fff";
         li.append(b, n, s);
         $("historico").appendChild(li);
