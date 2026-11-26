@@ -1,11 +1,16 @@
-# Saúde+ · Sentinela — Pronto atendimento (simulação escolar)
+# Sumaúma — Pronto atendimento (ambiente demonstrativo)
 
-> **Simulação escolar — não utilizar para atendimento real.** Use apenas nomes inventados. O sistema não pede CPF, telefone, endereço nem data de nascimento: cada paciente recebe um código fictício `SIM-0000` e uma idade aproximada.
+> **Ambiente demonstrativo — não destinado a atendimento real.** Use apenas nomes inventados. O sistema não pede CPF, telefone, endereço nem data de nascimento: cada paciente recebe um código fictício `SIM-0000` e uma idade aproximada.
 
 Fluxo: **Recepção → Triagem (classificação de risco) → Consultório → Sala de medicação**, com **painel de chamadas na TV** (só senha e local, som opcional), **almoxarifado** fictício e **painel administrativo** (equipe, auditoria, modo apresentação).
 
 ## Tela inicial: hospital 3D
 Na primeira visita de cada sessão há uma abertura de ~6 s (fachada → portas automáticas → hall → recepção) com botão **Pular** (ou Esc). Depois, cada setor tem um ponto clicável e um menu convencional; a câmera vai até o setor e o botão abre o módulo **somente se o perfil logado tiver permissão** (o servidor confere de novo). O login fica sempre acessível. Sem WebGL, com "reduzir movimento", **Modo leve** ou aparelho fraco, a tela usa uma versão simplificada ou ilustração 2D.
+
+## Acesso administrativo
+**Ctrl+Shift+M** (ou Alt+Shift+A, ou o botão de chave/“Administrador”) abre a janela de acesso: com sessão de admin, mostra o seletor de setores (troca auditada); sem ela, leva ao login real. O atalho não concede nenhum privilégio.
+
+Se o login do admin falhar no Render, abra `/api/health`: o campo `admin` diz se a variável está ausente ou curta (sem mostrar valores) e o log de inicialização mostra `[config] administrador: configurado` ou o motivo. A senha digitada no login **não cria conta**: ela precisa ser igual a `SENTINELA_ADMIN_PASSWORD`.
 
 ## Acesso
 Não existem contas de demonstração. O administrador vem **somente** das variáveis de ambiente:

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Saúde+ · Sentinela — design system
+   Sumaúma · Sentinela — design system
    Uma base só para todas as telas: cores, tipografia, cartões, formulários, filas e selos de risco.
    ========================================================================== */
 :root {
@@ -397,8 +397,20 @@ input[readonly] { background: var(--superficie-2); }
   .login-arte > .login-vfx { display: none !important; }
 }
 
-/* faixa permanente de simulação (todas as telas internas) */
-.faixa-sim { padding: 6px 16px; background: #fff7e6; border-bottom: 1px solid #f3d9a4; color: #8a4b08; font-size: 12.5px; font-weight: 600; text-align: center; }
+/* identificação discreta de ambiente demonstrativo + acesso administrativo */
+.rodape-demo { margin: 28px auto 0; padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); max-width: 1400px; color: var(--texto-suave); font-size: 12px; text-align: center; border-top: 1px solid var(--borda); }
 .setor-admin { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--texto-suave); }
 .setor-admin select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--borda); background: #fff; font-weight: 600; }
+.btn-admin svg { width: 18px; height: 18px; }
+.dialogo { width: min(460px, calc(100% - 32px)); padding: 20px 22px 22px; border: 0; border-radius: 18px; box-shadow: var(--sombra-forte); color: var(--texto); }
+.dialogo::backdrop { background: rgba(12, 28, 34, .45); backdrop-filter: blur(2px); }
+.dialogo-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.dialogo-topo h2 { font-size: 19px; }
+.dialogo p { color: var(--texto-suave); font-size: 14px; }
+.dialogo .acoes, .dialogo-setores { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+.dialogo-setores .btn { flex: 1 1 130px; }
 @media (max-width: 700px) { .setor-admin span { display: none; } }
+/* telas estreitas: itens de grade e cabeçalhos de cartão nunca forçam rolagem horizontal */
+.grade > *, .cartao { min-width: 0; }
+.cartao-cabeca { flex-wrap: wrap; row-gap: 10px; }
+.tabela { min-width: 560px; }

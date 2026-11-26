@@ -1,5 +1,5 @@
 /**
- * Saúde+ · Sentinela — API do pronto atendimento.
+ * Sumaúma · Sentinela — API do pronto atendimento.
  * Fluxo de um paciente (um único registro, do cadastro à alta):
  *   aguardando_triagem → aguardando_medico → em_atendimento → aguardando_medicacao → finalizado
  *   (ou "desistiu" a qualquer momento antes da alta).
@@ -16,7 +16,7 @@ const { cenarioDemo, ESTOQUE_INICIAL } = require("./demo");
 const TIPOS = ["admin", "atendimento", "triagem", "medico", "enfermagem"];
 const SESSAO_HORAS = 10;
 const COOKIE = "sp_sessao";
-const AVISO = "Simulação escolar — não utilizar para atendimento real";
+const AVISO = "Ambiente demonstrativo — não destinado a atendimento real";
 const MEDICAMENTOS = [
   "Dipirona 500 mg", "Dipirona 1 g (injetável)", "Paracetamol 750 mg", "Ibuprofeno 600 mg", "Cetoprofeno 100 mg",
   "Amoxicilina 500 mg", "Azitromicina 500 mg", "Cefalexina 500 mg", "Loratadina 10 mg", "Dexclorfeniramina 2 mg",
@@ -74,6 +74,10 @@ const rota = fn => async (req, res) => {
     await fn(req, res);
   } catch (e) {
     if (e && e.status) return erro(res, e.status, e.message);
+    if (/SENTINELA_ADMIN|Redis persistente/.test(String(e && e.message))) {
+      console.error("[config]", e.message);
+      return erro(res, 503, "Servidor sem configuração de administrador ou banco. Verifique as variáveis de ambiente no painel da hospedagem.");
+    }
     console.error("[api]", req.method, req.url, e);
     erro(res, 500, "Erro interno no servidor. Tente novamente em instantes.");
   }
@@ -169,7 +173,7 @@ app.post("/api/login", rota(async (req, res) => {
   if (chaves.some(bloqueado)) return erro(res, 429, "Muitas tentativas. Aguarde alguns minutos e tente novamente.");
   const resultado = await store.alterar(db => {
     const u = db.usuarios.find(x => x.usuario.toLowerCase() === usuario);
-    if (!u || !store.senhaConfere(senha, u.senha)) { auditar(db, req, "login recusado", usuario); return null; }
+    if (!u || !(store.senhaConfere(senha, u.senha) || (senha.trim() !== senha && store.senhaConfere(senha.trim(), u.senha)))) { auditar(db, req, "login recusado", usuario); return null; }
     const token = crypto.randomBytes(32).toString("base64url");
     const agora = new Date();
     db.sessoes = db.sessoes.filter(s => new Date(s.expira) > agora).slice(-300);
@@ -513,9 +517,10 @@ app.post("/api/estoque/:id/movimento", exigir("enfermagem"), rota(async (req, re
 app.get("/api/health", rota(async (req, res) => {
   const m = store.modo();
   const persistente = m === "redis" || !store.producao() || !!process.env.DB_FILE;
-  let ok = true;
+  let ok = true, admin = "configurado";
+  try { store.credenciaisAdmin(); } catch (e) { admin = /PASSWORD/.test(e.message) ? "senha ausente ou com menos de 16 caracteres" : "usuário ausente ou inválido"; }
   try { await store.ler(); } catch (e) { ok = false; }
-  res.status(ok ? 200 : 503).json({ ok, servico: "Saúde+ Sentinela", armazenamento: m, persistente });
+  res.status(ok ? 200 : 503).json({ ok, servico: "Sumaúma", armazenamento: m, persistente, admin });
 }));
 
 app.use("/api", (req, res) => erro(res, 404, "Rota da API não encontrada."));

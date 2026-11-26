@@ -2,10 +2,11 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Crect width="24" height="24" rx="6" fill="#0f5c55"/%3E%3Cg fill="none" stroke="#f5efe2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"%3E%3Cpath d="M12 3c-3.6 0-6.5 2.4-6.5 5.4 0 2.3 1.7 4.2 4.1 4.9H14.4c2.4-.7 4.1-2.6 4.1-4.9C18.5 5.4 15.6 3 12 3z"/%3E%3Cpath d="M12 21v-7.7M12 16.4l-2.8-2.1M12 18.4l2.9-2.4"/%3E%3C/g%3E%3C/svg%3E">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#16343d">
-  <meta name="description" content="Saúde+ · simulação escolar de pronto atendimento">
-  <title>Saúde+ · Pronto atendimento</title>
+  <meta name="description" content="Sumaúma · pronto atendimento — ambiente demonstrativo">
+  <title>Sumaúma · Pronto atendimento</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
   <link rel="stylesheet" href="css/style.css">
@@ -14,17 +15,17 @@
   <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
 </head>
 <body class="hall">
-  <div class="faixa-sim" role="note">Simulação escolar — não utilizar para atendimento real</div>
-  <div class="hall-poster" aria-hidden="true"></div>
+    <div class="hall-poster" aria-hidden="true"></div>
   <canvas id="cena" class="hall-cena" aria-hidden="true"></canvas>
   <div id="pontos" class="hall-pontos" aria-label="Setores no hospital"></div>
 
   <header class="hall-topo">
-    <span class="marca"><span class="marca-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Saúde+<small>Pronto atendimento</small></span></span>
+    <span class="marca"><span class="marca-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-3.6 0-6.5 2.4-6.5 5.4 0 2.3 1.7 4.2 4.1 4.9H14.4c2.4-.7 4.1-2.6 4.1-4.9C18.5 5.4 15.6 3 12 3z"/><path d="M12 21v-7.7M12 16.4l-2.8-2.1M12 18.4l2.9-2.4"/></svg></span><span>Sumaúma<small>Pronto atendimento</small></span></span>
     <div class="hall-topo-acoes">
       <button type="button" class="chip" id="pular" hidden>Pular abertura ⏭</button>
       <button type="button" class="chip" id="leve" aria-pressed="false" title="Desliga o 3D para economizar bateria e dados">Modo leve</button>
       <a class="chip" href="tv.html" target="_blank" rel="noopener">📺 Painel da TV</a>
+      <button type="button" class="chip" id="chip-admin" title="Acesso administrativo (Ctrl+Shift+M)">Administrador</button>
     </div>
   </header>
 
@@ -41,6 +42,7 @@
 
   <aside class="hall-login" id="painel" data-aberto="1">
     <button type="button" class="hall-login-alca" id="alca" aria-controls="form" aria-expanded="true"><span id="alca-texto">Entrar na equipe</span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 15 6-6 6 6"/></svg></button>
+    <p class="hall-rodape" role="note">Ambiente demonstrativo · não destinado a atendimento real</p>
     <form class="caixa" id="form" novalidate>
       <div id="logado" hidden>
         <h2>Olá, <span id="logado-nome"></span></h2>
@@ -65,7 +67,7 @@
           <button class="btn btn-grande" id="entrar" type="submit">Entrar</button>
         </div>
         <div class="erro-form" id="erro" role="alert"></div>
-        <p class="hall-nota">Ambiente de aula: use apenas nomes inventados. Não há contas de demonstração públicas.</p>
+        <p class="hall-nota">Ambiente demonstrativo, não destinado a atendimento real. Use apenas dados fictícios.</p>
       </div>
     </form>
   </aside>
