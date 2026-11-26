@@ -1,0 +1,88 @@
+/* Saúde+ · tela inicial com hospital 3D. Painéis claros e discretos sobre a cena; tudo legível também sem 3D. */
+.faixa-sim { position: relative; z-index: 40; padding: 6px 16px; background: #fff7e6; border-bottom: 1px solid #f3d9a4; color: #8a4b08; font-size: 12.5px; font-weight: 600; text-align: center; letter-spacing: .01em; }
+body.hall { min-height: 100vh; min-height: 100dvh; overflow: hidden; background: #e8d6c2; color: #10232b; }
+.hall-poster, .hall-cena { position: fixed; inset: 0; width: 100%; height: 100%; }
+.hall-poster {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 900' preserveAspectRatio='xMidYMax slice'%3E%3Cdefs%3E%3ClinearGradient id='v' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23a9c4c6' stop-opacity='.55'/%3E%3Cstop offset='1' stop-color='%23314c53' stop-opacity='.7'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M0 640h1600v260H0z' fill='%23b9ad9a'/%3E%3Cpath d='M300 330h1000v330H300z' fill='%23efe8dd'/%3E%3Cpath d='M300 330h1000v26H300z' fill='%2333424a'/%3E%3Cpath d='M318 380h964v118H318z' fill='%23304850'/%3E%3Cg fill='%23f6f2ea'%3E%3Cpath d='M330 380h8v118h-8zM380 380h8v118h-8zM430 380h8v118h-8zM480 380h8v118h-8zM530 380h8v118h-8zM580 380h8v118h-8zM630 380h8v118h-8zM680 380h8v118h-8zM730 380h8v118h-8zM780 380h8v118h-8zM830 380h8v118h-8zM880 380h8v118h-8zM930 380h8v118h-8zM980 380h8v118h-8zM1030 380h8v118h-8zM1080 380h8v118h-8zM1130 380h8v118h-8zM1180 380h8v118h-8zM1230 380h8v118h-8z'/%3E%3C/g%3E%3Cpath d='M560 520h480v140H560z' fill='url(%23v)'/%3E%3Cpath d='M600 500h400v16H600z' fill='%23f7f3ec'/%3E%3Cpath d='M610 516h380v6H610z' fill='%2316343d'/%3E%3Cpath d='M1150 300h120v170h-120z' fill='%230f6b64'/%3E%3Ccircle cx='1185' cy='336' r='16' fill='%23fff8ea'/%3E%3Cpath d='M1181 326h8v20h-8zM1175 332h20v8h-20z' fill='%230f6b64'/%3E%3Cg fill='%2357703f'%3E%3Ccircle cx='230' cy='560' r='70'/%3E%3Ccircle cx='290' cy='590' r='50'/%3E%3Ccircle cx='1380' cy='565' r='72'/%3E%3Ccircle cx='1330' cy='600' r='46'/%3E%3C/g%3E%3C/svg%3E") center bottom / cover no-repeat,
+    linear-gradient(180deg, #6f97bd 0%, #c9c0b8 52%, #f2c8a0 72%, #e9d3bd 100%);
+}
+.hall-cena { display: block; opacity: 0; transition: opacity .8s ease; touch-action: manipulation; }
+body.com-3d .hall-cena { opacity: 1; }
+
+.hall-topo { position: fixed; z-index: 30; top: 40px; left: 16px; right: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; pointer-events: none; }
+.hall-topo > * { pointer-events: auto; }
+.hall-topo .marca { padding: 8px 14px 8px 8px; border-radius: 16px; background: rgba(255, 252, 246, .86); backdrop-filter: blur(12px); box-shadow: 0 6px 24px rgba(30, 24, 16, .12); }
+.hall-topo-acoes { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.chip { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(22, 52, 61, .12); background: rgba(255, 252, 246, .88); backdrop-filter: blur(12px); color: #16343d; font-size: 13.5px; font-weight: 650; text-decoration: none; cursor: pointer; box-shadow: 0 4px 18px rgba(30, 24, 16, .1); }
+.chip:hover { background: #fff; }
+.chip[aria-pressed="true"] { background: #16343d; color: #fff; }
+.chip:focus-visible, .hs:focus-visible, .hall-login-alca:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+#pular { background: #16343d; color: #fff; border-color: transparent; }
+
+/* pontos dos setores sobre a cena */
+.hall-pontos { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+body:not(.com-3d) .hall-pontos, body.em-intro .hall-pontos { display: none; }
+.hs { position: absolute; left: 0; top: 0; margin: -22px 0 0 -22px; display: flex; align-items: center; gap: 8px; min-width: 44px; height: 44px; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; transition: opacity .25s ease; will-change: transform; }
+.hs.oculto { opacity: 0; pointer-events: none; }
+.hs i { position: relative; flex: 0 0 44px; height: 44px; border-radius: 50%; }
+.hs i::before { content: ""; position: absolute; inset: 15px; border-radius: 50%; background: #fffaf0; box-shadow: 0 0 0 4px var(--c), 0 2px 10px rgba(0, 0, 0, .35); }
+.hs i::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; border: 2px solid rgba(255, 250, 240, .85); opacity: .0; transform: scale(.7); }
+.hs span { padding: 5px 10px; border-radius: 999px; background: rgba(16, 35, 43, .82); color: #fff; font-size: 12.5px; font-weight: 650; white-space: nowrap; box-shadow: 0 4px 14px rgba(0, 0, 0, .2); }
+.hs:hover i::after, .hs:focus-visible i::after, .hs.ativo i::after { opacity: 1; transform: scale(1); transition: all .25s ease; }
+.hs.ativo span { background: var(--c); }
+@media (prefers-reduced-motion: no-preference) { .hs:not(.ativo) i::after { animation: pulso 2.8s ease-out infinite; } }
+@keyframes pulso { 0% { opacity: .7; transform: scale(.55); } 70%, 100% { opacity: 0; transform: scale(1.15); } }
+
+/* menu convencional de setores */
+.hall-menu { position: fixed; z-index: 20; left: 16px; bottom: 16px; max-width: min(640px, calc(100% - 460px)); padding: 10px; border-radius: 18px; background: rgba(255, 252, 246, .86); backdrop-filter: blur(14px); box-shadow: 0 10px 36px rgba(30, 24, 16, .16); }
+.hall-menu-titulo { display: block; margin: 0 4px 8px; font-size: 11px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: #5b6b73; }
+.hall-menu-lista { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-setor { box-shadow: none; background: #fff; min-height: 38px; padding: 6px 12px; }
+.chip-setor i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.chip-setor.ativo { background: var(--c); color: #fff; border-color: transparent; }
+.chip-setor.ativo i { background: #fff; }
+body.em-intro .hall-menu, body.em-intro .hall-setor { opacity: 0; pointer-events: none; transform: translateY(10px); }
+.hall-menu, .hall-setor { transition: opacity .5s ease, transform .5s ease; }
+
+/* cartão do setor escolhido */
+.hall-setor { position: fixed; z-index: 21; left: 16px; bottom: 150px; width: min(420px, calc(100% - 32px)); display: grid; grid-template-columns: 6px 1fr; gap: 0 14px; padding: 16px 18px 16px 14px; border-radius: 18px; background: rgba(255, 252, 246, .94); backdrop-filter: blur(14px); box-shadow: 0 14px 40px rgba(30, 24, 16, .2); }
+.hall-setor-cor { grid-row: span 2; border-radius: 6px; }
+.hall-setor h2 { font-size: 20px; }
+.hall-setor p { margin-top: 4px; color: #44545c; font-size: 14px; }
+.hall-setor .hall-setor-acesso { font-size: 12.5px; color: #6b7a82; }
+.hall-setor .acoes { grid-column: 2; margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+.hall-setor .btn[disabled] { opacity: .55; cursor: not-allowed; }
+
+/* login */
+.hall-login { position: fixed; z-index: 25; top: 104px; right: 16px; width: min(380px, calc(100% - 32px)); border-radius: 22px; background: rgba(255, 253, 249, .95); backdrop-filter: blur(16px); box-shadow: 0 20px 60px rgba(30, 24, 16, .22); }
+.hall-login .caixa { padding: 22px 24px 20px; }
+.hall-login h2 { font-size: 24px; }
+.hall-login .sub { color: #5b6b73; margin: 6px 0 18px; font-size: 14px; }
+.hall-login .acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.hall-nota { margin-top: 14px; font-size: 12px; color: #6b7a82; }
+.hall-login-alca { display: none; }
+body.em-intro .hall-login { animation: chegar .7s .35s ease both; }
+@keyframes chegar { from { opacity: 0; transform: translateY(-8px); } }
+
+@media (max-width: 820px) {
+  .hall-topo { top: 38px; left: 10px; right: 10px; align-items: flex-start; }
+  .hall-topo .marca { font-size: 15px; padding: 6px 10px 6px 6px; }
+  .hall-topo .marca small { display: none; }
+  .hall-topo-acoes .chip { min-height: 36px; padding: 6px 11px; font-size: 12.5px; }
+  .hall-login { top: auto; bottom: 0; right: 0; left: 0; width: 100%; border-radius: 22px 22px 0 0; padding-bottom: env(safe-area-inset-bottom); max-height: 78dvh; overflow: auto; }
+  .hall-login-alca { display: flex; width: 100%; align-items: center; justify-content: space-between; min-height: 56px; padding: 0 20px; border: 0; background: none; font: inherit; font-weight: 750; font-size: 16px; color: #16343d; cursor: pointer; }
+  .hall-login-alca svg { transition: transform .25s ease; }
+  .hall-login[data-aberto="0"] .caixa { display: none; }
+  .hall-login[data-aberto="1"] .hall-login-alca svg { transform: rotate(180deg); }
+  .hall-login .caixa { padding-top: 4px; }
+  .hall-menu { left: 10px; right: 10px; max-width: none; bottom: 66px; padding: 8px; }
+  .hall-menu-titulo { display: none; }
+  .hall-menu-lista { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .hall-menu-lista::-webkit-scrollbar { display: none; }
+  .chip-setor { flex: 0 0 auto; }
+  .hall-setor { left: 10px; right: 10px; width: auto; bottom: 128px; }
+  body.painel-aberto .hall-menu, body.painel-aberto .hall-setor { opacity: 0; pointer-events: none; }
+  .hs span { font-size: 11.5px; padding: 4px 8px; }
+}
+@media (max-height: 560px) and (max-width: 1000px) { .hall-setor { bottom: 120px; } }

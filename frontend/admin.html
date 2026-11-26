@@ -53,6 +53,16 @@
         </section>
 
         <section class="cartao">
+          <div class="cartao-cabeca"><div><h2>Modo apresentação</h2><p>Carrega 8 pacientes fictícios em etapas diferentes do fluxo (marcados como demonstração) e estoque fictício. Remover não afeta os demais registros.</p></div></div>
+          <div class="cartao-corpo acoes"><button class="btn" id="demo-carregar">Carregar cenário</button><button class="btn btn-secundario" id="demo-remover">Remover cenário</button></div>
+        </section>
+
+        <section class="cartao">
+          <div class="cartao-cabeca"><div><h2>Auditoria</h2><p>Logins, trocas de setor e ações administrativas (sem senhas nem dados clínicos)</p></div></div>
+          <ul class="fila" id="auditoria" style="max-height:280px;border-top:1px solid var(--borda)"></ul>
+        </section>
+
+        <section class="cartao">
           <div class="cartao-cabeca"><div><h2>Encerrar o dia</h2><p>Apaga pacientes, chamadas da TV e zera as senhas. A equipe é mantida.</p></div></div>
           <div class="cartao-corpo"><button class="btn btn-perigo" id="limpar">Limpar todos os pacientes</button></div>
         </section>
@@ -86,12 +96,12 @@
         $("tabela-pac").innerHTML = pac.length ? pac.map(p => {
           const fim = p.finalizadoEm ? new Date(p.finalizadoEm) : new Date();
           const min = Math.round((fim - new Date(p.criadoEm)) / 60000);
-          return "<tr><td><b>" + esc(p.senha) + "</b></td><td>" + esc(p.nome) + "</td><td>" + (seloRisco(p.triagem && p.triagem.risco) || "—") + "</td><td>" + seloStatus(p.status) + "</td><td>" + hora(p.criadoEm) + "</td><td>" + min + " min</td></tr>";
+          return "<tr><td><b>" + esc(p.senha) + "</b></td><td>" + esc(p.nome) + ' <small style="color:var(--texto-suave)">' + esc(p.codigo || "") + "</small></td><td>" + (seloRisco(p.triagem && p.triagem.risco) || "—") + "</td><td>" + seloStatus(p.status) + "</td><td>" + hora(p.criadoEm) + "</td><td>" + min + " min</td></tr>";
         }).join("") : '<tr><td colspan="6" class="vazio">Nenhum paciente hoje.</td></tr>';
 
         $("aviso-armazenamento").innerHTML = saude.persistente ? "" :
           '<div class="alerta alerta-aviso" style="margin-bottom:20px"><span style="font-size:20px">⚠️</span><div><b>Os dados não estão em um banco permanente.</b>' +
-          "Na Vercel, conecte um banco Upstash Redis (aba Storage do projeto → Upstash/Redis → Connect). As variáveis KV_REST_API_URL e KV_REST_API_TOKEN são criadas sozinhas e o sistema passa a salvar de verdade após o próximo deploy.</div></div>";
+          " Conecte um Redis (Upstash/Vercel KV: KV_REST_API_URL e KV_REST_API_TOKEN) ou, no Render, um disco persistente com DB_FILE. Sem isso, os registros somem quando o serviço reinicia.</div></div>";
       } catch (e) { toast(e.message, "erro"); }
     }
 
@@ -118,11 +128,25 @@
     });
 
     $("limpar").onclick = () => {
-      if (!confirm("Apagar TODOS os pacientes e chamadas? Esta ação não pode ser desfeita.")) return;
-      acao($("limpar"), async () => { await API.post("/admin/limpar"); toast("Dados do dia apagados.", "sucesso"); carregarPainel(); });
+      if ((prompt("Isto apaga TODOS os pacientes e chamadas e não pode ser desfeito.\nDigite LIMPAR para confirmar:") || "").trim().toUpperCase() !== "LIMPAR") return;
+      acao($("limpar"), async () => { await API.post("/admin/limpar", { confirmar: "LIMPAR" }); toast("Dados do dia apagados.", "sucesso"); carregarPainel(); carregarAuditoria(); });
     };
+    $("demo-carregar").onclick = () => {
+      if (!confirm("Carregar o cenário fictício? Pacientes de demonstração anteriores serão substituídos.")) return;
+      acao($("demo-carregar"), async () => { const r = await API.post("/admin/demo", { confirmar: "DEMO" }); toast(r.pacientes + " pacientes fictícios carregados.", "sucesso"); carregarPainel(); carregarAuditoria(); });
+    };
+    $("demo-remover").onclick = () => {
+      if (!confirm("Remover apenas os pacientes de demonstração?")) return;
+      acao($("demo-remover"), async () => { const r = await API.del("/admin/demo"); toast(r.removidos + " registro(s) de demonstração removidos.", "sucesso"); carregarPainel(); carregarAuditoria(); });
+    };
+    async function carregarAuditoria() {
+      try {
+        const lista = await API.get("/admin/auditoria");
+        $("auditoria").innerHTML = lista.length ? lista.slice(0, 60).map(a => '<li class="item-fila" style="cursor:default;grid-template-columns:auto 1fr"><span class="espera">' + hora(a.em) + '</span><div><div class="nome" style="font-size:14px">' + esc(a.acao) + (a.detalhe ? " · " + esc(a.detalhe) : "") + '</div><div class="meta"><span>@' + esc(a.por) + "</span><span>" + esc((PERFIS[a.perfil] || {}).nome || a.perfil) + "</span></div></div></li>").join("") : '<li class="vazio">Sem registros.</li>';
+      } catch (e) { toast(e.message, "erro"); }
+    }
 
-    carregarPainel(); carregarUsuarios();
+    carregarPainel(); carregarUsuarios(); carregarAuditoria();
     SP.aCada(carregarPainel, 10000);
   </script>
 </body>

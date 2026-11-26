@@ -29,34 +29,23 @@
         <div class="cartao-cabeca"><div><h2>Novo paciente</h2><p>Campos com * são obrigatórios</p></div></div>
         <form class="cartao-corpo campos" id="form" novalidate>
           <div class="campo">
-            <label for="nome">Nome completo *</label>
+            <label for="nome">Nome do paciente (fictício) *</label>
             <input id="nome" autocomplete="off" maxlength="100" required>
           </div>
           <div class="campos-2">
             <div class="campo">
-              <label for="cpf">CPF *</label>
-              <input id="cpf" inputmode="numeric" placeholder="000.000.000-00" required>
-              <div class="dica" id="cpf-dica">Somente números; a máscara é automática.</div>
-            </div>
-            <div class="campo">
-              <label for="nascimento">Nascimento</label>
-              <input id="nascimento" type="date">
+              <label for="idade">Idade aproximada</label>
+              <input id="idade" type="number" inputmode="numeric" min="0" max="120" placeholder="anos">
               <div class="dica" id="idade-dica">60+ entra como preferencial.</div>
             </div>
-          </div>
-          <div class="campos-2">
             <div class="campo">
-              <label for="telefone">Telefone</label>
-              <input id="telefone" type="tel" inputmode="numeric" placeholder="(00) 00000-0000">
-            </div>
-            <div class="campo">
-              <label for="convenio">Convênio</label>
+              <label for="convenio">Convênio (fictício)</label>
               <select id="convenio">
-                <option>Particular</option><option>SUS</option><option>Unimed</option><option>Amil</option>
-                <option>Bradesco Saúde</option><option>SulAmérica</option><option>Hapvida</option><option>Outro</option>
+                <option>Particular</option><option>Convênio escolar</option><option>Plano fictício A</option><option>Plano fictício B</option><option>Outro</option>
               </select>
             </div>
           </div>
+          <p class="dica">Use apenas nomes inventados. O sistema não pede CPF, telefone nem endereço e gera um código fictício (SIM-0000).</p>
           <div class="campo">
             <label for="preferencial">Atendimento preferencial</label>
             <select id="preferencial">
@@ -74,7 +63,7 @@
           <div><h2>Pacientes de hoje</h2><p id="resumo-lista">Carregando…</p></div>
           <div class="busca" style="width:min(260px,50%)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-            <input id="busca" placeholder="Buscar nome, CPF ou senha">
+            <input id="busca" placeholder="Buscar nome, código ou senha">
           </div>
         </div>
         <ul class="fila" id="lista" style="max-height:none"></ul>
@@ -93,35 +82,27 @@
     guiche.value = localStorage.getItem("saudeplus.guiche") || "01";
     guiche.onchange = () => localStorage.setItem("saudeplus.guiche", guiche.value.trim() || "01");
 
-    SP.mascaraCpf($("cpf"), d => {
-      const dica = $("cpf-dica"), ok = SP.cpfValido(d);
-      $("cpf").classList.toggle("valido", ok);
-      $("cpf").classList.toggle("invalido", d.length === 11 && !ok);
-      dica.classList.toggle("erro", d.length === 11 && !ok);
-      dica.textContent = d.length < 11 ? "Somente números; a máscara é automática." : ok ? "✓ CPF válido" : "CPF inválido — confira os dígitos.";
-    });
-    SP.mascaraTelefone($("telefone"));
-    $("nascimento").max = new Date().toISOString().slice(0, 10);
-    $("nascimento").onchange = () => {
-      const v = $("nascimento").value; if (!v) return;
-      const n = new Date(v), h = new Date();
-      let a = h.getFullYear() - n.getFullYear(); if (h < new Date(h.getFullYear(), n.getMonth(), n.getDate())) a--;
-      $("idade-dica").textContent = a + " anos" + (a >= 60 ? " · preferencial ★" : "");
+    $("idade").oninput = () => {
+      const a = Number($("idade").value);
+      $("idade-dica").textContent = $("idade").value === "" ? "60+ entra como preferencial." : a + " anos" + (a >= 60 ? " · preferencial ★" : "");
       if (a >= 60 && !$("preferencial").value) $("preferencial").value = "Idoso (60+)";
     };
 
     $("form").addEventListener("submit", e => {
       e.preventDefault();
-      const nome = $("nome").value.trim(), cpf = $("cpf").value;
+      const nome = $("nome").value.trim(), idade = $("idade").value;
       if (nome.length < 3) { toast("Informe o nome completo do paciente.", "erro"); $("nome").focus(); return; }
-      if (!SP.cpfValido(cpf)) { toast("CPF inválido. Confira os números.", "erro"); $("cpf").focus(); return; }
+      if (idade !== "" && !(Number(idade) >= 0 && Number(idade) <= 120)) { toast("Idade entre 0 e 120 anos.", "erro"); $("idade").focus(); return; }
       acao($("cadastrar"), async () => {
-        const p = await API.post("/pacientes", {
-          nome, cpf, nascimento: $("nascimento").value, telefone: $("telefone").value,
-          convenio: $("convenio").value, motivoPreferencial: $("preferencial").value
-        });
+        const corpo = { nome, idade: idade === "" ? undefined : Number(idade), convenio: $("convenio").value, motivoPreferencial: $("preferencial").value };
+        let p;
+        try { p = await API.post("/pacientes", corpo); }
+        catch (err) {
+          if (!/Já existe um paciente/i.test(err.message) || !confirm(err.message + "\n\nCadastrar mesmo assim?")) throw err;
+          p = await API.post("/pacientes", { ...corpo, confirmarDuplicado: true });
+        }
         mostrarTicket(p);
-        $("form").reset(); $("cpf").className = ""; $("idade-dica").textContent = "60+ entra como preferencial."; $("cpf-dica").textContent = "Somente números; a máscara é automática.";
+        $("form").reset(); $("idade-dica").textContent = "60+ entra como preferencial.";
         toast("Paciente cadastrado · senha " + p.senha, "sucesso");
         carregar();
       });
@@ -131,7 +112,7 @@
       const t = $("ticket");
       t.hidden = false;
       t.innerHTML = '<div class="ticket"><div style="font-weight:800">Saúde+ · Pronto atendimento</div><div class="numero">' + esc(p.senha) + '</div>' +
-        '<div><b>' + esc(p.nome) + '</b></div><div style="color:var(--texto-suave);font-size:13px">' + new Date(p.criadoEm).toLocaleString("pt-BR") + (p.preferencial ? " · Preferencial" : "") +
+        '<div><b>' + esc(p.nome) + '</b> · ' + esc(p.codigo || "") + '</div><div style="color:var(--texto-suave);font-size:13px">' + new Date(p.criadoEm).toLocaleString("pt-BR") + (p.preferencial ? " · Preferencial" : "") +
         '</div><div style="margin-top:8px;font-size:13px">Aguarde ser chamado(a) no painel para a <b>triagem</b>.</div>' +
         '<div class="acoes" style="justify-content:center;margin-top:12px"><button type="button" class="btn btn-secundario btn-p" onclick="window.print()">🖨️ Imprimir senha</button>' +
         '<button type="button" class="btn btn-fantasma btn-p" onclick="document.getElementById(\'ticket\').hidden=true">Fechar</button></div></div>';
@@ -139,7 +120,7 @@
 
     function render() {
       const termo = $("busca").value.trim().toLowerCase();
-      const lista = pacientes.filter(p => !termo || [p.nome, p.cpf, p.senha].some(v => String(v).toLowerCase().includes(termo)));
+      const lista = pacientes.filter(p => !termo || [p.nome, p.codigo, p.senha].some(v => String(v).toLowerCase().includes(termo)));
       const cont = s => pacientes.filter(p => s.includes(p.status)).length;
       $("indicadores").innerHTML = [
         ["Cadastrados hoje", pacientes.length, "no sistema"],
@@ -153,7 +134,7 @@
         const ativo = !["finalizado", "desistiu"].includes(p.status);
         return '<li class="item-fila" style="cursor:default" data-risco="' + (p.triagem ? p.triagem.risco : "") + '">' +
           '<span class="senha">' + esc(p.senha) + "</span>" +
-          '<div><div class="nome">' + esc(p.nome) + '</div><div class="meta"><span>' + esc(p.cpf) + "</span><span>" + esc(p.convenio) + "</span>" + seloPref(p) + seloRisco(p.triagem && p.triagem.risco) + "</div></div>" +
+          '<div><div class="nome">' + esc(p.nome) + '</div><div class="meta"><span>' + esc(p.codigo || "") + (p.idade != null ? " · " + esc(p.idade) + " anos" : "") + "</span><span>" + esc(p.convenio) + "</span>" + seloPref(p) + seloRisco(p.triagem && p.triagem.risco) + "</div></div>" +
           '<div class="lado">' + seloStatus(p.status) + '<span class="espera">' + hora(p.criadoEm) + (ativo ? " · " + espera(p.criadoEm) : "") + "</span>" +
           (ativo ? '<div class="acoes"><button class="btn btn-azul btn-p" data-chamar="' + p.id + '">' + SP.ICONES.megafone + 'Chamar</button><button class="btn btn-perigo btn-p" data-desistir="' + p.id + '">Desistiu</button></div>' : "") +
           "</div></li>";

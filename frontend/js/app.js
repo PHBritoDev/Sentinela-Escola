@@ -11,6 +11,7 @@
     medico: { nome: "Médico", inicio: "medico.html" },
     enfermagem: { nome: "Medicação", inicio: "medicacoes.html" }
   };
+  const AVISO = "Simulação escolar — não utilizar para atendimento real";
 
   const MODULOS = [
     { id: "admin", rotulo: "Painel", href: "admin.html", perfis: ["admin"] },
@@ -18,6 +19,7 @@
     { id: "triagem", rotulo: "Triagem", href: "triagem.html", perfis: ["admin", "triagem"] },
     { id: "medico", rotulo: "Consultório", href: "medico.html", perfis: ["admin", "medico"] },
     { id: "medicacoes", rotulo: "Medicação", href: "medicacoes.html", perfis: ["admin", "medico", "enfermagem"] },
+    { id: "almoxarifado", rotulo: "Almoxarifado", href: "almoxarifado.html", perfis: ["admin", "medico", "enfermagem"] },
     { id: "tv", rotulo: "Painel da TV ↗", href: "tv.html", perfis: ["admin", "atendimento", "triagem", "medico", "enfermagem"], novaAba: true }
   ];
 
@@ -49,20 +51,22 @@
   };
 
   // ---------- sessão ----------
+  // O token fica num cookie HttpOnly (inacessível ao JavaScript). Aqui guardamos só o perfil público, como dica de interface:
+  // quem decide o acesso é sempre o servidor.
   function sessao() {
-    try { return JSON.parse(localStorage.getItem(CHAVE) || "null"); } catch { return null; }
+    try { return JSON.parse(sessionStorage.getItem(CHAVE) || "null"); } catch { return null; }
   }
-  function salvarSessao(s) { localStorage.setItem(CHAVE, JSON.stringify(s)); }
-  function limparSessao() { localStorage.removeItem(CHAVE); }
+  function salvarSessao(s) { try { sessionStorage.setItem(CHAVE, JSON.stringify({ usuario: s.usuario, nome: s.nome, tipo: s.tipo })); } catch { /* modo privado */ } }
+  function limparSessao() { try { sessionStorage.removeItem(CHAVE); localStorage.removeItem(CHAVE); } catch { /* ignora */ } }
 
   // ---------- API ----------
   async function api(metodo, rota, corpo) {
-    const s = sessao();
     let resposta;
     try {
       resposta = await fetch("/api" + rota, {
         method: metodo,
-        headers: { "Content-Type": "application/json", ...(s && s.token ? { Authorization: "Bearer " + s.token } : {}) },
+        headers: { "Content-Type": "application/json", "X-Saude-Plus": "1" },
+        credentials: "same-origin",
         body: corpo === undefined ? undefined : JSON.stringify(corpo),
         cache: "no-store"
       });
@@ -70,7 +74,7 @@
       throw new Error("Sem conexão com o servidor. Verifique a internet e tente de novo.");
     }
     const dados = await resposta.json().catch(() => ({}));
-    if (resposta.status === 401 && rota !== "/login") {
+    if (resposta.status === 401 && rota !== "/login" && rota !== "/me?sonda=1") {
       limparSessao();
       location.href = "index.html?expirou=1";
       throw new Error(dados.erro || "Sessão expirada.");
@@ -102,30 +106,6 @@
   function seloStatus(s) { return '<span class="selo status-' + s + '">' + (STATUS[s] || s) + "</span>"; }
   function seloPref(p) { return p.preferencial ? '<span class="selo selo-pref" title="Atendimento preferencial">★ ' + esc(p.motivoPreferencial || "Preferencial") + "</span>" : ""; }
   function iniciais(nome) { return String(nome || "?").split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase(); }
-
-  function mascaraCpf(input, aoValidar) {
-    input.addEventListener("input", () => {
-      const d = input.value.replace(/\D/g, "").slice(0, 11);
-      input.value = d.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-      if (aoValidar) aoValidar(d);
-    });
-  }
-  function mascaraTelefone(input) {
-    input.addEventListener("input", () => {
-      const d = input.value.replace(/\D/g, "").slice(0, 11);
-      input.value = d.length > 10 ? d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3") : d.replace(/(\d{2})(\d{0,4})(\d{0,4})/, (m, a, b, c) => "(" + a + (b ? ") " + b : "") + (c ? "-" + c : "")).replace(/^\($/, "");
-    });
-  }
-  function cpfValido(cpf) {
-    const d = String(cpf).replace(/\D/g, "");
-    if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
-    for (const t of [9, 10]) {
-      let s = 0;
-      for (let i = 0; i < t; i++) s += Number(d[i]) * (t + 1 - i);
-      if (((s * 10) % 11) % 10 !== Number(d[t])) return false;
-    }
-    return true;
-  }
 
   // ---------- avisos ----------
   function toast(mensagem, tipo = "") {
@@ -162,12 +142,20 @@
   function proteger(modulo) {
     const s = sessao();
     const def = MODULOS.find(m => m.id === modulo);
-    if (!s || !s.token) { location.replace("index.html"); throw new Error("sem sessão"); }
+    if (!s || !s.tipo) { location.replace("index.html?setor=" + encodeURIComponent(modulo || "")); throw new Error("sem sessão"); }
     if (def && !def.perfis.includes(s.tipo)) { location.replace((PERFIS[s.tipo] || PERFIS.atendimento).inicio); throw new Error("sem acesso"); }
     montarTopo(modulo, s);
-    // confere com o servidor (sessão pode ter expirado)
-    API.get("/me").catch(() => {});
+    faixaSimulacao();
+    // o servidor confirma a sessão (cookie) e o perfil; dados só chegam se ele autorizar
+    API.get("/me").then(u => { if (u.tipo !== s.tipo) { salvarSessao(u); location.reload(); } }).catch(() => {});
     return s;
+  }
+
+  function faixaSimulacao() {
+    if (document.querySelector(".faixa-sim")) return;
+    const f = document.createElement("div");
+    f.className = "faixa-sim"; f.setAttribute("role", "note"); f.textContent = AVISO;
+    document.body.prepend(f);
   }
 
   function montarTopo(modulo, s) {
@@ -179,19 +167,26 @@
       '<a class="marca" href="' + (PERFIS[s.tipo] || PERFIS.atendimento).inicio + '"><span class="marca-icone">' + ICONES.logo + "</span><span>Saúde+<small>Pronto atendimento</small></span></a>" +
       '<nav class="nav" aria-label="Módulos">' + links + "</nav>" +
       '<span class="relogio" id="relogio-topo"></span>' +
+      (s.tipo === "admin" ? '<label class="setor-admin" title="Troca de setor (registrada na auditoria)"><span>Setor</span><select id="setor-admin" aria-label="Trocar de setor">' +
+        MODULOS.filter(m => !m.novaAba).map(m => '<option value="' + m.id + '"' + (m.id === modulo ? " selected" : "") + ">" + m.rotulo + "</option>").join("") + "</select></label>" : "") +
       '<div class="usuario-topo"><span class="avatar">' + esc(iniciais(s.nome)) + '</span><span class="quem"><b>' + esc(s.nome) + "</b><span>" + esc((PERFIS[s.tipo] || {}).nome || s.tipo) + "</span></span>" +
       '<button class="btn btn-fantasma btn-p" id="sair" title="Sair">' + ICONES.sair + "<span>Sair</span></button></div>";
     document.body.prepend(topo);
     const rel = topo.querySelector("#relogio-topo");
     const tic = () => { rel.textContent = new Date().toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); };
     tic(); setInterval(tic, 15000);
+    const sel = topo.querySelector("#setor-admin");
+    if (sel) sel.onchange = async () => {
+      const m = MODULOS.find(x => x.id === sel.value);
+      try { await API.post("/admin/setor", { setor: m.id }); location.href = m.href; } catch (e) { toast(e.message, "erro"); sel.value = modulo; }
+    };
     topo.querySelector("#sair").onclick = async () => { try { await API.post("/logout"); } catch { /* ignora */ } limparSessao(); location.href = "index.html"; };
   }
 
   /** Chama um paciente na TV da sala de espera. */
   async function chamarNaTv(pacienteId, local, numero) {
     const c = await API.post("/tv/chamar", { pacienteId, local, numero });
-    toast("📺 " + c.paciente + " chamado(a) na TV · " + c.localNome + " " + c.numero, "sucesso");
+    toast("📺 " + (c.paciente || c.senha) + " chamado(a) na TV · " + c.localNome + " " + c.numero, "sucesso");
     return c;
   }
 
@@ -201,5 +196,5 @@
     return refs;
   }
 
-  window.SP = { API, PERFIS, RISCOS, STATUS, ICONES, sessao, salvarSessao, limparSessao, esc, hora, espera, minutosDesde, seloRisco, seloStatus, seloPref, iniciais, mascaraCpf, mascaraTelefone, cpfValido, toast, acao, aCada, proteger, chamarNaTv, referencias };
+  window.SP = { API, PERFIS, RISCOS, STATUS, ICONES, sessao, salvarSessao, limparSessao, esc, hora, espera, minutosDesde, seloRisco, seloStatus, seloPref, iniciais, toast, faixaSimulacao, AVISO, MODULOS, acao, aCada, proteger, chamarNaTv, referencias };
 })();
