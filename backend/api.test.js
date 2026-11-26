@@ -39,10 +39,16 @@ test("login do admin vem do segredo; cookie HttpOnly e token fora do corpo", asy
   assert.equal(r.dados.token, undefined);
   assert.match(adm.ultimoSetCookie, /HttpOnly/);
   assert.match(adm.ultimoSetCookie, /SameSite=Strict/);
-  assert.match(r.dados.aviso, /Simulação escolar/);
+  assert.match(r.dados.aviso, /demonstrativo/);
   for (const [u, s] of [["admin", "admin123"], ["atendimento", "123"], ["medico", "123"]]) assert.equal((await anon("POST", "/api/login", { usuario: u, senha: s })).status, 401, "conta demo " + u + " não existe");
   for (const [u, t] of [["recep", "atendimento"], ["tria", "triagem"], ["doc", "medico"], ["enf", "enfermagem"]])
     assert.equal((await adm("POST", "/api/usuarios", { usuario: u, nome: "Equipe " + u, senha: SENHA, tipo: t })).status, 201);
+});
+
+test("health informa só se o admin está configurado, sem valores", async () => {
+  const r = await anon("GET", "/api/health");
+  assert.equal(r.dados.admin, "configurado");
+  assert.equal(JSON.stringify(r.dados).includes(ADM[1]), false);
 });
 
 test("CSRF: escrita sem o cabeçalho X-Saude-Plus é recusada", async () => {

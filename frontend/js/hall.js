@@ -1,4 +1,4 @@
-/* Saúde+ · tela inicial: login + hospital 3D interativo. Tudo funciona sem o 3D (menu de setores e formulário). */
+/* Sumaúma · tela inicial: login + hospital 3D interativo. Tudo funciona sem o 3D (menu de setores e formulário). */
 import { SETORES } from "./setores.js";
 
 const $ = id => document.getElementById(id);
@@ -106,7 +106,7 @@ function visaoGeral() {
   hospital && hospital.visaoGeral();
 }
 $("setor-voltar").onclick = visaoGeral;
-addEventListener("keydown", e => { if (e.key !== "Escape") return; if (document.body.classList.contains("em-intro")) hospital && hospital.pular(); else if (setorAtual) visaoGeral(); });
+addEventListener("keydown", e => { if (e.key !== "Escape") return; if (document.body.classList.contains("em-intro")) $("pular").click(); else if (setorAtual) visaoGeral(); });
 
 function projetar(lista) {
   for (const p of lista) {
@@ -132,20 +132,24 @@ async function ligar3D(comIntro) {
   try { mod = await import("./hospital3d.js"); } catch { return semTresD(); }
   const fazerIntro = comIntro && !reduzido;
   if (fazerIntro) { document.body.classList.add("em-intro"); $("pular").hidden = false; if (celular) painel(false); }
-  hospital = mod.iniciarHospital({
+  try {
+  hospital = await mod.iniciarHospital({
     canvas: $("cena"), nivel: nivel(), intro: fazerIntro, reduzido,
     aoProjetar: projetar,
-    aoFimIntro: () => { document.body.classList.remove("em-intro"); $("pular").hidden = true; if (setorAtual) hospital && hospital.focar(setorAtual); },
+    aoFimIntro: () => { document.body.classList.remove("em-intro"); $("pular").hidden = true; if (setorAtual) setTimeout(() => hospital && hospital.focar(setorAtual)); },
     aoFalhar: () => semTresD()
   });
+  } catch (e) { console.warn("3D indisponível:", e && e.message); hospital = null; }
   if (!hospital) return semTresD();
+  if (pularCedo) hospital.pular();
   document.body.classList.add("com-3d");
 }
 function semTresD() {
   if (hospital) { hospital.destruir(); hospital = null; }
   document.body.classList.remove("com-3d", "em-intro"); $("pular").hidden = true;
 }
-$("pular").onclick = () => hospital && hospital.pular();
+let pularCedo = false;
+$("pular").onclick = () => { if (hospital) hospital.pular(); else pularCedo = true; };
 $("leve").onclick = () => {
   const leve = ler(localStorage, "sp.leve") !== "1";
   gravar(localStorage, "sp.leve", leve ? "1" : null);
@@ -154,12 +158,21 @@ $("leve").onclick = () => {
 };
 addEventListener("pagehide", () => hospital && hospital.destruir());
 
+// ---------- acesso administrativo ----------
+$("chip-admin").onclick = () => SP.acessoAdmin();
+if (new URLSearchParams(location.search).has("admin")) {
+  destino = "admin";
+  $("sub").textContent = "Acesso administrativo: entre com a conta de administrador.";
+}
+
 // ---------- início ----------
 conferirSessao();
-painel(!celular);
+painel(!celular || destino === "admin");
+if (destino === "admin") setTimeout(() => $("usuario").focus(), 50);
 const leve = ler(localStorage, "sp.leve") === "1";
 $("leve").setAttribute("aria-pressed", String(leve));
 if (destino && SETORES.some(s => s.id === destino)) selecionar(destino);
+if (destino === "admin") painel(true);
 if (!leve) {
   const primeira = ler(sessionStorage, "sp.intro") !== "1";
   gravar(sessionStorage, "sp.intro", "1");

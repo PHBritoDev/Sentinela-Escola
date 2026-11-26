@@ -2,9 +2,10 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Crect width="24" height="24" rx="6" fill="#0f5c55"/%3E%3Cg fill="none" stroke="#f5efe2" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"%3E%3Cpath d="M12 3c-3.6 0-6.5 2.4-6.5 5.4 0 2.3 1.7 4.2 4.1 4.9H14.4c2.4-.7 4.1-2.6 4.1-4.9C18.5 5.4 15.6 3 12 3z"/%3E%3Cpath d="M12 21v-7.7M12 16.4l-2.8-2.1M12 18.4l2.9-2.4"/%3E%3C/g%3E%3C/svg%3E">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#06141c">
-  <title>Painel de chamadas · Saúde+</title>
+  <title>Painel de chamadas · Sumaúma</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap">
   <style>
@@ -19,6 +20,7 @@
     }
     header { display: flex; align-items: center; justify-content: space-between; }
     .marca { display: flex; align-items: center; gap: 1vw; font-weight: 800; font-size: 2.2vw; }
+    .marca i svg { width: 72%; height: 72%; color: #fff; }
     .marca i { display: grid; place-items: center; width: 3.4vw; height: 3.4vw; border-radius: .9vw; background: linear-gradient(135deg, #2dd4bf, #0f766e); font-style: normal; font-size: 2.4vw; }
     .marca small { display: block; font-size: .95vw; font-weight: 600; color: var(--suave); letter-spacing: .14em; text-transform: uppercase; }
     .relogio { text-align: right; }
@@ -84,7 +86,7 @@
 <body>
   <div class="flash"></div>
   <header>
-    <div class="marca"><i>+</i><div>Saúde+<small>Painel de chamadas</small></div></div>
+    <div class="marca"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-3.6 0-6.5 2.4-6.5 5.4 0 2.3 1.7 4.2 4.1 4.9H14.4c2.4-.7 4.1-2.6 4.1-4.9C18.5 5.4 15.6 3 12 3z"/><path d="M12 21v-7.7M12 16.4l-2.8-2.1M12 18.4l2.9-2.4"/></svg></i><div>Sumaúma<small>Painel de chamadas</small></div></div>
     <div class="relogio"><b id="hora">--:--</b><span id="data"></span></div>
   </header>
 
@@ -110,7 +112,7 @@
   </main>
 
   <footer>
-    <span class="tag">SIMULAÇÃO ESCOLAR</span>
+    <span class="tag">AMBIENTE DEMONSTRATIVO</span>
     <span id="dica"></span>
     <span class="conexao" id="conexao">● conectando…</span>
   </footer>

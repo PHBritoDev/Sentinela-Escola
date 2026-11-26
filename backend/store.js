@@ -68,7 +68,8 @@ function producao() {
 
 function credenciaisAdmin() {
   const usuario = String(process.env.SENTINELA_ADMIN_USER || "").trim().toLowerCase();
-  const senha = String(process.env.SENTINELA_ADMIN_PASSWORD || "");
+  // remove espaços/quebras de linha nas pontas (comum ao colar no painel da plataforma)
+  const senha = String(process.env.SENTINELA_ADMIN_PASSWORD || "").trim();
   if (usuario || senha || producao()) {
     if (!/^[a-z0-9._-]{3,40}$/.test(usuario)) throw new Error("Configure SENTINELA_ADMIN_USER (3 a 40 caracteres: letras, números, ponto, hífen).");
     if (senha.length < 16) throw new Error("Configure SENTINELA_ADMIN_PASSWORD com pelo menos 16 caracteres.");

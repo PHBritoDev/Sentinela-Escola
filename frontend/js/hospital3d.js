@@ -1,5 +1,5 @@
 /**
- * Saúde+ · hospital 3D da tela inicial (Three.js, sem modelos externos).
+ * Sumaúma · hospital 3D da tela inicial (Three.js, sem modelos externos).
  * Fachada ao entardecer → aproximação na altura dos olhos → portas de vidro automáticas → hall → recepção.
  * Depois da entrada, a cena vira um mapa interativo: cada setor tem um ponto (botão HTML acessível) e a câmera viaja até ele.
  * Desempenho: geometria estática mesclada por material (~40 draw calls), DPR limitado, sombra só onde compensa e congelada,
@@ -27,8 +27,12 @@ const suave = t => t * t * t * (t * (t * 6 - 15) + 10);
 const senoide = t => 0.5 - 0.5 * Math.cos(Math.PI * t);
 const lim = (v, a, b) => Math.min(b, Math.max(a, v));
 
-export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzido = false, aoProjetar, aoFimIntro, aoFalhar }) {
+export async function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzido = false, aoProjetar, aoFimIntro, aoFalhar }) {
   const T0 = performance.now();
+  // a montagem é fatiada (cede a vez ao navegador entre etapas) para não travar o login nem o primeiro toque
+  const etapas = [];
+  const pausa = () => { etapas.push(Math.round(performance.now() - T0)); return pausa0(); };
+  const pausa0 = () => new Promise(r => (window.requestIdleCallback ? requestIdleCallback(() => r(), { timeout: 80 }) : setTimeout(r, 16)));
   const alto = nivel === "alto", baixo = nivel === "baixo";
   let renderer;
   try {
@@ -36,12 +40,13 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
   } catch (e) { aoFalhar && aoFalhar(e); return null; }
   const dprMax = alto ? 1.75 : baixo ? 1 : 1.35;
   let dpr = Math.min(window.devicePixelRatio || 1, dprMax);
+  const dprMin = alto ? 1 : 0.75;
   renderer.setPixelRatio(dpr);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.92;
   renderer.shadowMap.enabled = !baixo;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = alto ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   renderer.shadowMap.autoUpdate = false;
 
   const cena = new THREE.Scene();
@@ -61,6 +66,7 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
     return guardar(t);
   }
   let semente = 7;
+  const moldes = new Map();
   const rnd = () => ((semente = (semente * 16807) % 2147483647) / 2147483647);
   const ruido = (g, w, h, n, a, cores) => { for (let i = 0; i < n; i++) { g.globalAlpha = a * (0.4 + rnd() * 0.6); g.fillStyle = cores[(rnd() * cores.length) | 0]; const s = rnd() * 2.2 + 0.6; g.fillRect(rnd() * w, rnd() * h, s, s); } g.globalAlpha = 1; };
 
@@ -89,6 +95,7 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
     g.strokeStyle = "#8f877a"; g.lineWidth = 3;
     for (let k = 0; k <= 512; k += 128) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k, h); g.moveTo(0, k); g.lineTo(w, k); g.stroke(); }
   });
+  await pausa();
   const texGrama = textura(256, 256, (g, w, h) => { g.fillStyle = "#6f8a4e"; g.fillRect(0, 0, w, h); ruido(g, w, h, 6000, 0.35, ["#5b7740", "#88a25e", "#4d6537", "#9bb070"]); });
   const texMadeira = textura(256, 1024, (g, w, h) => {
     const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, "#b07c4f"); gr.addColorStop(0.5, "#c08d5c"); gr.addColorStop(1, "#a87348");
@@ -98,6 +105,9 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
   const texAsfalto = textura(256, 256, (g, w, h) => { g.fillStyle = "#4a4b4d"; g.fillRect(0, 0, w, h); ruido(g, w, h, 5000, 0.4, ["#5e5f61", "#3a3b3c", "#6c6c6a"]); });
   texTerrazo.repeat.set(1, 1);
 
+  // marca (copa da sumaúma) desenhada com o mesmo traço do SVG da interface
+  const COPA = new Path2D("M12 3c-3.6 0-6.5 2.4-6.5 5.4 0 2.3 1.7 4.2 4.1 4.9H14.4c2.4-.7 4.1-2.6 4.1-4.9C18.5 5.4 15.6 3 12 3z"), TRONCO = new Path2D("M12 21v-7.7M12 16.4l-2.8-2.1M12 18.4l2.9-2.4");
+  function marca(g, cx, cy, esc, cor, larg) { g.save(); g.translate(cx - 12 * esc, cy - 12 * esc); g.scale(esc, esc); g.strokeStyle = cor; g.lineWidth = larg; g.lineCap = g.lineJoin = "round"; g.stroke(COPA); g.stroke(TRONCO); g.restore(); }
   function placa(texto, { sub = "", cor = "#0f766e", w = 1024, h = 256, fundo = "#f8f6f1", tinta = "#17323b", icone = true } = {}) {
     return textura(w, h, (g) => {
       g.fillStyle = fundo; g.fillRect(0, 0, w, h);
@@ -111,14 +121,14 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
   const logoFachada = textura(1024, 256, (g, w, h) => {
     g.clearRect(0, 0, w, h);
     g.fillStyle = "#fffdf7"; g.font = "800 150px Inter, system-ui, sans-serif"; g.textBaseline = "middle";
-    const cx = 120, cy = h / 2; g.beginPath(); g.arc(cx, cy, 92, 0, 6.3); g.fill();
-    g.fillStyle = "#0f766e"; g.fillRect(cx - 14, cy - 58, 28, 116); g.fillRect(cx - 58, cy - 14, 116, 28);
-    g.fillStyle = "#fffdf7"; g.fillText("Saúde+", 250, cy + 6);
+    const cx = 120, cy = h / 2; g.beginPath(); g.arc(cx, cy, 96, 0, 6.3); g.fill();
+    marca(g, cx, cy, 7.2, "#0f5c55", 2.1);
+    g.fillStyle = "#fffdf7"; g.font = "700 132px Inter, system-ui, sans-serif"; g.fillText("Sumaúma", 248, cy + 6);
   }, { repetir: false });
   const faixaMarquise = textura(2048, 128, (g, w, h) => {
     g.fillStyle = "#16343d"; g.fillRect(0, 0, w, h);
     g.fillStyle = "#f6efe1"; g.font = "700 64px Inter, system-ui, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
-    g.letterSpacing = "10px"; g.fillText("PRONTO ATENDIMENTO  ·  SAÚDE+", w / 2, h / 2 + 3);
+    g.letterSpacing = "10px"; g.fillText("SUMAÚMA  ·  PRONTO ATENDIMENTO", w / 2, h / 2 + 3);
   }, { repetir: false });
   const telaTv = textura(1024, 576, (g, w, h) => {
     const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, "#0d2531"); gr.addColorStop(1, "#06141c"); g.fillStyle = gr; g.fillRect(0, 0, w, h);
@@ -129,7 +139,7 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
     g.fillStyle = "rgba(255,255,255,.08)"; g.fillRect(640, 120, 330, 380);
     g.fillStyle = "#cfe1e8"; g.font = "600 30px Inter, system-ui, sans-serif";
     ["A011 · Triagem 1", "P004 · Consult. 2", "A010 · Medicação"].forEach((l, i) => g.fillText(l, 668, 190 + i * 86));
-    g.fillStyle = "#7d97a3"; g.font = "500 24px Inter, system-ui, sans-serif"; g.fillText("Ilustração · simulação escolar", 56, 528);
+    g.fillStyle = "#7d97a3"; g.font = "500 24px Inter, system-ui, sans-serif"; g.fillText("Ilustração · ambiente demonstrativo", 56, 528);
   }, { repetir: false });
   const placaTeto = textura(2048, 256, (g, w, h) => {
     g.fillStyle = "#15323b"; g.fillRect(0, 0, w, h);
@@ -140,11 +150,11 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
   }, { repetir: false });
   const logoHall = textura(1024, 256, (g, w, h) => {
     g.clearRect(0, 0, w, h); g.fillStyle = "#f1ece2"; g.textBaseline = "middle";
-    g.font = "800 140px Inter, system-ui, sans-serif"; g.fillText("Saúde+", 230, h / 2 + 4);
-    g.lineWidth = 16; g.strokeStyle = "#f1ece2"; g.beginPath(); g.arc(110, h / 2, 82, 0, 6.3); g.stroke();
-    g.fillRect(96, h / 2 - 50, 28, 100); g.fillRect(60, h / 2 - 14, 100, 28);
+    g.font = "700 124px Inter, system-ui, sans-serif"; g.fillText("Sumaúma", 210, h / 2 + 4);
+    marca(g, 105, h / 2, 7.4, "#f1ece2", 2);
   }, { repetir: false });
 
+  await pausa();
   // ---------- materiais ----------
   const M = {};
   const mat = (nome, o) => (M[nome] = guardar(new THREE.MeshStandardMaterial(o)));
@@ -249,7 +259,7 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
   for (const [x, z, w, d] of [[-9.5, 9, 6, 2.4], [9.5, 9, 6, 2.4], [-14, 16, 5, 5], [14, 16, 5, 5], [-12.5, 23, 3, 3], [12, 23.5, 3, 3]]) {
     arred("concreto", w, 0.55, d, 0.05, x, -0.05, z);
     caixa("grama", w - 0.3, 0.02, d - 0.3, x, 0.5, z);
-    for (let i = 0; i < Math.round(w / 0.7); i++) por("folha", corFolha(new THREE.IcosahedronGeometry(0.42 + rnd() * 0.12, 2), 0.55), x - w / 2 + 0.45 + i * 0.7, 0.75, z + (rnd() - 0.5) * (d - 1));
+    for (let i = 0; i < Math.round(w / 0.7); i++) por("folha", folhagem(0.42 + rnd() * 0.12, 2, 0.55), x - w / 2 + 0.45 + i * 0.7, 0.75, z + (rnd() - 0.5) * (d - 1));
     arvores.push([x + (rnd() - 0.5) * 1.5, z + (rnd() - 0.5) * 0.6, 0.85 + rnd() * 0.35]);
   }
   for (const [x, z] of [[-24, 4], [24, 5], [-28, 22], [30, 20], [-20, 40], [22, 42], [-40, 30], [42, 30], [-8, 44], [10, 46]]) arvores.push([x, z, 1.1 + rnd() * 0.5]);
@@ -258,6 +268,12 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
   for (let i = -3; i <= 3; i++) if (i) { cil("acoEsc", 0.09, 0.09, 0.85, i * 2.1, 0, 7.2, 10); cil("luzQuente", 0.07, 0.07, 0.05, i * 2.1, 0.86, 7.2, 10); }
 
   // folhagem: esfera subdividida com deformação contínua (normais suaves) e cor por vértice — evita o aspecto facetado
+  function folhagem(raio, det, base) {
+    const k = det + ":" + base + ":" + ((rnd() * 4) | 0);
+    if (!moldes.has(k)) moldes.set(k, guardar(corFolha(new THREE.IcosahedronGeometry(1, det), base)));
+    const g = moldes.get(k).clone().scale(raio, raio * (0.85 + rnd() * 0.3), raio); g.rotateY(rnd() * 6.28);
+    return g;
+  }
   function corFolha(geo, base) {
     geo.deleteAttribute("uv"); const g = mergeVertices(geo); geo.dispose();
     const p = g.attributes.position, cores = new Float32Array(p.count * 3), v3 = new THREE.Vector3();
@@ -281,10 +297,11 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
     for (let i = 0; i < n; i++) {
       const a = i * 2.39996 + rnd() * 0.5, r = Math.sqrt(i / n) * 1.05 * s, y = (3.0 + (1 - i / n) * 0.9 + rnd() * 0.5) * s;
       if (i % 3 === 1) cil("tronco", 0.03 * s, 0.05 * s, 1.1 * s, x + Math.cos(a) * r * 0.5, 2.0 * s, z + Math.sin(a) * r * 0.5, 5);
-      por("folha", corFolha(new THREE.IcosahedronGeometry((0.62 + rnd() * 0.32) * s, baixo ? 1 : 2), 1), x + Math.cos(a) * r, y, z + Math.sin(a) * r);
+      por("folha", folhagem((0.62 + rnd() * 0.32) * s, baixo ? 1 : 2, 1), x + Math.cos(a) * r, y, z + Math.sin(a) * r);
     }
   }
 
+  await pausa();
   // ---------- interior ----------
   const balcaoDest = guardar(new THREE.MeshStandardMaterial({ color: 0x0f766e, emissive: 0x2dd4bf, emissiveIntensity: 0, roughness: 0.5 }));
   caixa("terrazo", 18, 0.02, 14, 0, -0.01, -7);
@@ -305,7 +322,7 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
   // vasos e plantas internas
   for (const [x, z] of [[-8.2, -1.0], [8.2, -1.0], [-4.9, -13.1], [4.9, -13.1], [8.1, -12.8]]) {
     cil("vaso", 0.34, 0.26, 0.62, x, 0, z, 18);
-    for (let i = 0; i < 3; i++) por("folha", corFolha(new THREE.IcosahedronGeometry(0.42 + rnd() * 0.18, 2), 0.8), x + (rnd() - 0.5) * 0.4, 1.0 + i * 0.34, z + (rnd() - 0.5) * 0.4);
+    for (let i = 0; i < 3; i++) por("folha", folhagem(0.42 + rnd() * 0.18, 2, 0.8), x + (rnd() - 0.5) * 0.4, 1.0 + i * 0.34, z + (rnd() - 0.5) * 0.4);
   }
   // banco junto à vidraça
   caixa("madeira", 3.2, 0.07, 0.6, 5.4, 0.45, -1.1); for (const dx of [-1.4, 1.4]) caixa("acoEsc", 0.06, 0.45, 0.5, 5.4 + dx, 0, -1.1);
@@ -383,6 +400,7 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
   });
   const abrirPortas = k => { for (const p of portas) p.g.position.x = p.s * (0.81 + 1.55 * k); };
 
+  await pausa();
   // mescla final
   const malhasEstaticas = [];
   for (const [nome, lista] of baldes) {
@@ -395,6 +413,7 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
     cena.add(m); malhasEstaticas.push(m);
   }
 
+  await pausa();
   // ---------- céu, luz e névoa ----------
   const sol = new THREE.Vector3(0.62, 0.26, 0.6).normalize();
   const ceuMat = guardar(new THREE.ShaderMaterial({
@@ -421,7 +440,7 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
   }
   cena.add(luzSol, luzSol.target);
   // luz interna: poucas fontes quentes (o restante vem do ambiente e das luminárias emissivas)
-  for (const [x, z, i] of (baixo ? [[0, -8, 40]] : [[0, -9.6, 34], [-5.5, -5, 22], [5.5, -5, 22]])) {
+  for (const [x, z, i] of (alto ? [[0, -9.6, 34], [-5.5, -5, 22], [5.5, -5, 22]] : [[0, -8, 46]])) {
     const l = new THREE.PointLight(0xffe3bf, i, 18, 2); l.position.set(x, 4.1, z); cena.add(l);
   }
 
@@ -449,7 +468,7 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
     const e = senoide(u);
     curvaPos.getPointAt(e, camera.position); curvaAlvo.getPointAt(e, alvo);
     camera.lookAt(alvo);
-    const k = lim((u - 0.5) / 0.16, 0, 1); if (k !== portasK) { portasK = k; abrirPortas(suave(k)); sombraSuja = true; }
+    const k = lim((u - 0.5) / 0.16, 0, 1); if (k !== portasK) { portasK = k; abrirPortas(suave(k)); }
   }
   let sombraSuja = true;
   function irPara(pos, olhar, dur = 1.25) {
@@ -458,24 +477,27 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
     estado = "voo"; acordar();
   }
   function fimIntro() {
-    estado = "parado"; portasK = 1; abrirPortas(1); sombraSuja = true;
+    estado = "parado"; portasK = 1; abrirPortas(1);
     camera.position.copy(VISAO.pos); alvo.copy(VISAO.alvo); camera.lookAt(alvo);
     stats.introMs = Math.round(performance.now() - T0); pedir();
     aoFimIntro && aoFimIntro();
   }
 
-  const stats = { nivel, dpr, fps: 0, drawCalls: 0, triangulos: 0, carregamentoMs: 0, introMs: 0 };
+  const stats = { etapas, nivel, dpr, fps: 0, drawCalls: 0, triangulos: 0, carregamentoMs: 0, introMs: 0 };
   function quadro(agora) {
     rodando = false;
     if (!ativo) return;
-    const dt = Math.min(0.05, ultimo ? (agora - ultimo) / 1000 : 0.016); ultimo = agora;
+    const dt = Math.min(0.1, ultimo ? (agora - ultimo) / 1000 : 0.016); ultimo = agora;
     let anima = false;
     if (estado === "intro") {
       if (!congelado) tIntro += dt / DUR; anima = !congelado;
       if (tIntro >= 1) fimIntro(); else poseIntro(tIntro);
       quadros++; tempoQuadros += dt;
       // queda de qualidade automática se o aparelho não acompanhar
-      if (tempoQuadros > 1.4 && quadros / tempoQuadros < 28 && dpr > 1) { dpr = Math.max(1, dpr * 0.75); renderer.setPixelRatio(dpr); stats.dpr = dpr; ajustarTela(); quadros = 0; tempoQuadros = 0; }
+      // qualidade adaptativa medida em tempo real: reduz resolução; se ainda assim travar, encerra a abertura no hall
+      const fpsAgora = tempoQuadros > 1.2 ? quadros / tempoQuadros : 60;
+      if (fpsAgora < 14 && dpr <= dprMin) fimIntro();
+      else if (fpsAgora < 28 && dpr > dprMin) { dpr = Math.max(dprMin, dpr * 0.75); renderer.setPixelRatio(dpr); stats.dpr = dpr; ajustarTela(); quadros = 0; tempoQuadros = 0; }
     } else if (estado === "voo" && voo) {
       voo.t += Math.min(0.1, (agora - (voo.t0 || (voo.t0 = agora - 16))) / 1000) / voo.dur; voo.t0 = agora; const e = suave(Math.min(1, voo.t));
       camera.position.lerpVectors(voo.de, voo.para, e);
@@ -523,6 +545,13 @@ export function iniciarHospital({ canvas, nivel = "medio", intro = true, reduzid
   canvas.addEventListener("webglcontextlost", e => { e.preventDefault(); ativo = false; aoFalhar && aoFalhar(new Error("contexto perdido")); });
 
   ajustarTela();
+  // compila todos os shaders e envia texturas antes da abertura: sem engasgos quando a câmera entra no hall
+  await pausa();
+  if (intro && !reduzido) poseIntro(0); else { camera.position.copy(VISAO.pos); camera.lookAt(VISAO.alvo); }
+  try { if (renderer.compileAsync) await renderer.compileAsync(cena, camera); else renderer.compile(cena, camera); } catch { /* segue: compila no primeiro quadro */ }
+  for (const d of descartaveis) if (d.isTexture && renderer.initTexture) renderer.initTexture(d);
+  if (renderer.shadowMap.enabled) { renderer.shadowMap.needsUpdate = true; renderer.render(cena, camera); sombraSuja = false; }
+  await pausa();
   stats.carregamentoMs = Math.round(performance.now() - T0);
   if (intro && !reduzido) { estado = "intro"; tIntro = 0; poseIntro(0); }
   else fimIntro();
